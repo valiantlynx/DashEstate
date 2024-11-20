@@ -11,94 +11,85 @@
     <hr>
     <button id="clear-button">Clear All Filters</button>
     <div class="checkbox-grid">
-        <!-- Example for Year input field -->
-<div class="checkbox-item">
-    <label for="year">Year</label>
-    <input type="checkbox" id="year" onchange="toggleInput(event, 'year-input')" title="Select the year the property was built">
-    <div class="toggle-input-wrap">
-        <input type="number" id="year-input" class="toggle-input" placeholder="0-{{ maximums['year'] }}" min="0" max="{{ maximums['year'] }}">
-    </div>
-</div>
+        <!-- Built Year (Mapped to House Age) -->
         <div class="checkbox-item">
-            <label for="color">Color</label>
-            <input type="checkbox" id="color" onchange="toggleInput(event, 'color-input')">
+            <label for="year">Built Year</label>
+            <input type="checkbox" id="year" onchange="toggleInput(event, 'year-input')">
             <div class="toggle-input-wrap">
-                <select id="color-input" class="toggle-input">
-                    <option value="" selected disabled>Color</option>
-                    {% for color in unique_values['colors'] %}
-                    <option value="{{ color }}">{{ color }}</option>
-                    {% endfor %}
-                </select>
+                <input type="number" id="year-input" class="toggle-input" placeholder="Enter Built Year" min="1900" max="2030">
             </div>
         </div>
+        <!-- Advertisement -->
         <div class="checkbox-item">
-            <label for="remodeled">Remodeled</label>
-            <input type="checkbox" id="remodeled" onchange="toggleInput(event, 'remodeled-input')">
+            <label for="advertisement">Advertisement</label>
+            <input type="checkbox" id="advertisement" onchange="toggleAdvertisement(event)">
+        </div>
+        <!-- Size -->
+        <div class="checkbox-item">
+            <label for="size">Size</label>
+            <input type="checkbox" id="size" onchange="toggleInput(event, 'size-input')">
             <div class="toggle-input-wrap">
-                <input type="number" id="remodeled-input" class="toggle-input" placeholder="-1-{{ maximums['remodeled'] }}" min="-1" max="{{ maximums['remodeled'] }}">
+                <input type="number" id="size-input" class="toggle-input" placeholder="Enter Size" min="0">
             </div>
         </div>
+        <!-- Bathrooms -->
         <div class="checkbox-item">
             <label for="bathrooms">Bathrooms</label>
             <input type="checkbox" id="bathrooms" onchange="toggleInput(event, 'bathrooms-input')">
             <div class="toggle-input-wrap">
-                <input type="number" id="bathrooms-input" class="toggle-input" placeholder="0-{{ maximums['bathrooms'] }}" min="0" max="{{ maximums['bathrooms'] }}">
+                <input type="number" id="bathrooms-input" class="toggle-input" placeholder="Enter Number of Bathrooms" min="0">
             </div>
         </div>
+        <!-- Condition Rating -->
         <div class="checkbox-item">
-            <label for="days_on_marked">Days on Market</label>
-            <input type="checkbox" id="days_on_marked" onchange="toggleInput(event, 'days_on_marked-input')">
+            <label for="condition_rating">Condition Rating</label>
+            <input type="checkbox" id="condition_rating" onchange="toggleInput(event, 'condition_rating-input')">
             <div class="toggle-input-wrap">
-                <input type="number" id="days_on_marked-input" class="toggle-input" placeholder="0-{{ maximums['days_on_marked'] }}" min="0" max="{{ maximums['days_on_marked'] }}">
+                <select id="condition_rating-input" class="toggle-input">
+                    <option value="">Select Condition Rating</option>
+                    {% for cond_rating in unique_values.condition_ratings %}
+                    <option value="{{ cond_rating }}">{{ cond_rating }}</option>
+                    {% endfor %}
+                </select>
             </div>
         </div>
+        <!-- Crime Rating -->
         <div class="checkbox-item">
-            <label for="external_storage_m2">External Storage (m²)</label>
-            <input type="checkbox" id="external_storage_m2" onchange="toggleInput(event, 'external_storage_m2-input')">
+            <label for="crime_rating">Crime Rating</label>
+            <input type="checkbox" id="crime_rating" onchange="toggleInput(event, 'crime_rating-input')">
             <div class="toggle-input-wrap">
-                <input type="number" id="external_storage_m2-input" class="toggle-input" placeholder="m²" min="0" max="{{ maximums['external_storage_m2'] }}">
+                <select id="crime_rating-input" class="toggle-input">
+                    <option value="">Select Crime Rating</option>
+                    {% for rating in unique_values.condition_ratings %}
+                    <option value="{{ rating }}">{{ rating }}</option>
+                    {% endfor %}
+                </select>
             </div>
         </div>
+        <!-- Public Transport Rating -->
         <div class="checkbox-item">
-            <label for="kitchens">Kitchens</label>
-            <input type="checkbox" id="kitchens" onchange="toggleInput(event, 'kitchens-input')">
+            <label for="public_transport_rating">Public Transport Rating</label>
+            <input type="checkbox" id="public_transport_rating" onchange="toggleInput(event, 'public_transport_rating-input')">
             <div class="toggle-input-wrap">
-                <input type="number" id="kitchens-input" class="toggle-input" placeholder="0-{{ maximums['kitchens'] }}" min="0" max="{{ maximums['kitchens'] }}" step="1">
+                <select id="public_transport_rating-input" class="toggle-input">
+                    <option value="">Select Public Transport Rating</option>
+                    {% for rating in unique_values.condition_ratings %}
+                    <option value="{{ rating }}">{{ rating }}</option>
+                    {% endfor %}
+                </select>
             </div>
         </div>
+        <!-- School Rating -->
         <div class="checkbox-item">
-            <label for="lot_w">Lot Width</label>
-            <input type="checkbox" id="lot_w" onchange="toggleInput(event, 'lot_w-input')">
+            <label for="school_rating">School Rating</label>
+            <input type="checkbox" id="school_rating" onchange="toggleInput(event, 'school_rating-input')">
             <div class="toggle-input-wrap">
-                <input type="number" id="lot_w-input" class="toggle-input" placeholder="0-{{ maximums['lot_w'] }}" min="0" max="{{ maximums['lot_w'] }}">
-            </div>
-        </div>
-        <div class="checkbox-item">
-            <label for="price">Price</label>
-            <input type="checkbox" id="price" onchange="toggleInput(event, 'price-input')">
-            <div class="toggle-input-wrap">
-                <input type="number" id="price-input" class="toggle-input" placeholder="0-{{ maximums['price'] }}" min="0" max="{{ maximums['price'] }}">
-            </div>
-        </div>
-        <div class="checkbox-item">
-            <label for="rooms">Rooms</label>
-            <input type="checkbox" id="rooms" onchange="toggleInput(event, 'rooms-input')">
-            <div class="toggle-input-wrap">
-                <input type="number" id="rooms-input" class="toggle-input" placeholder="0-{{ maximums['rooms'] }}" min="0" max="{{ maximums['rooms'] }}">
-            </div>
-        </div>
-        <div class="checkbox-item">
-            <label for="storage_rating">Storage Rating</label>
-            <input type="checkbox" id="storage_rating" onchange="toggleInput(event, 'storage_rating-input')">
-            <div class="toggle-input-wrap">
-                <input type="number" id="storage_rating-input" class="toggle-input" placeholder="0-{{ maximums['storage_rating'] }}" min="0" max="{{ maximums['storage_rating'] }}">
-            </div>
-        </div>
-        <div class="checkbox-item">
-            <label for="sun_factor">Sun Factor</label>
-            <input type="checkbox" id="sun_factor" onchange="toggleInput(event, 'sun_factor-input')">
-            <div class="toggle-input-wrap">
-                <input type="number" id="sun_factor-input" class="toggle-input" placeholder="0-{{ maximums['sun_factor'] }}" min="0" max="{{ maximums['sun_factor'] }}">
+                <select id="school_rating-input" class="toggle-input">
+                    <option value="">Select School Rating</option>
+                    {% for rating in unique_values.condition_ratings %}
+                    <option value="{{ rating }}">{{ rating }}</option>
+                    {% endfor %}
+                </select>
             </div>
         </div>
     </div>
@@ -109,52 +100,82 @@
     function toggleInput(event, inputId) {
         const input = document.getElementById(inputId);
         input.classList.toggle('show', event.target.checked);
+        fetchPrediction();
+    }
+
+    function toggleAdvertisement(event) {
+        // Directly trigger prediction when advertisement checkbox is toggled
+        fetchPrediction();
     }
 
     function fetchPrediction() {
         const inputs = {};
-        document.querySelectorAll('.checkbox-item input.toggle-input, .checkbox-item select.toggle-input').forEach(input => {
-            if (input.classList.contains('show')) {
-                inputs[input.id.replace('-input', '')] = input.value || null;
+
+        // Collect all active inputs
+        document.querySelectorAll('.checkbox-item').forEach(item => {
+            const checkbox = item.querySelector('input[type="checkbox"]');
+            if (checkbox.checked) {
+                const inputElement = item.querySelector('.toggle-input');
+                if (inputElement) {
+                    if (inputElement.tagName.toLowerCase() === 'input') {
+                        inputs[inputElement.id.replace('-input', '')] = inputElement.value || null;
+                    } else if (inputElement.tagName.toLowerCase() === 'select') {
+                        inputs[inputElement.id.replace('-input', '')] = inputElement.value || null;
+                    }
+                } else if (checkbox.id === 'advertisement') {
+                    // Set 'premium' if advertisement is checked
+                    inputs['advertisement'] = true;
+                }
+            } else {
+                if (checkbox.id === 'advertisement') {
+                    // Set 'regular' if advertisement is unchecked
+                    inputs['advertisement'] = false;
+                }
             }
         });
 
         fetch('/predict', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(inputs)
         })
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('predicted-price').innerHTML = `<div style="text-align: center; font-size: 40px">Estimated Price: ${data.price}</div>`;
-        });
+            .then(response => response.json())
+            .then(data => {
+                if (data.price) {
+                    const formattedPrice = data.price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+                    document.getElementById('predicted-price').innerHTML = `<div style="text-align: center; font-size: 40px">Estimated Price: ${formattedPrice}</div>`;
+                } else if (data.error) {
+                    document.getElementById('predicted-price').innerHTML = `<div style="text-align: center; font-size: 24px; color: red;">Error: ${data.error}</div>`;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('predicted-price').innerHTML = `<div style="text-align: center; font-size: 24px; color: red;">An error occurred while fetching the prediction.</div>`;
+            });
     }
 
     document.getElementById('clear-button').addEventListener('click', () => {
-        // Trigger blinking animation on the whole checked .checkbox-item
         const checkedElements = document.querySelectorAll('.checkbox-item input[type="checkbox"]:checked');
         checkedElements.forEach(checkbox => {
+            checkbox.checked = false;
             const checkboxItem = checkbox.closest('.checkbox-item');
             if (checkboxItem) checkboxItem.classList.add('blink');
         });
-
-        // Clear and hide inputs immediately
-        checkedElements.forEach(checkbox => checkbox.checked = false);
 
         document.querySelectorAll('.toggle-input').forEach(input => {
             input.value = '';
             input.classList.remove('show');
         });
 
-        fetchPrediction(); // Ensure the prediction is updated after clearing filters
+        fetchPrediction();
 
-        // Remove blink class after the blink duration to allow blinking continuation
         setTimeout(() => {
             const elements = document.querySelectorAll('.blink');
             elements.forEach(el => el.classList.remove('blink'));
-        }, 500); // Match the blink animation duration
+        }, 500);
     });
 
+    // Add event listeners to inputs that should trigger prediction
     document.querySelectorAll('.checkbox-item input[type="number"], .checkbox-item select').forEach(el => {
         el.addEventListener('input', fetchPrediction);
     });
@@ -162,5 +183,6 @@
     document.querySelectorAll('.checkbox-item input[type="checkbox"]').forEach(el => {
         el.addEventListener('change', fetchPrediction);
     });
-</script></body>
+</script>
+</body>
 </html>
