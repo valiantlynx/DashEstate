@@ -145,7 +145,6 @@ def save_state_to_file(best_w, best_b, best_loss, file_path):
     }
     with open(file_path, 'w') as f:
         json.dump(state, f)
-    print(f"State saved to {file_path}")
 
 def load_state_from_file(file_path):
     with open(file_path, 'r') as f:
