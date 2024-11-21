@@ -306,72 +306,74 @@ def list_routes():
         }
         route_list.append(route_info)
     return jsonify(route_list), 200
-
 if __name__ == '__main__':
-    agents = load_jsonl('data/agents.jsonl')
-    districts = load_jsonl('data/districts.jsonl')
-    schools = load_jsonl('data/schools.jsonl')
-    houses = load_jsonl('data/houses.jsonl')
+    if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+        # Put your training code here
+        agents = load_jsonl('data/agents.jsonl')
+        districts = load_jsonl('data/districts.jsonl')
+        schools = load_jsonl('data/schools.jsonl')
+        houses = load_jsonl('data/houses.jsonl')
 
-    agents_dict = {agent['agent_id']: agent for agent in agents}
-    districts_dict = {district['id']: district for district in districts}
-    schools_dict = {school['id']: school for school in schools}
+        agents_dict = {agent['agent_id']: agent for agent in agents}
+        districts_dict = {district['id']: district for district in districts}
+        schools_dict = {school['id']: school for school in schools}
 
-    for house in houses:
-        agent_info = agents_dict.get(house.get('agent_id'), {})
-        house['agent_name'] = agent_info.get('name', 'Unknown')
-        district_info = districts_dict.get(house.get('district_id'), {})
-        house['crime_rating'] = district_info.get('crime_rating', None)
-        house['public_transport_rating'] = district_info.get('public_transport_rating', None)
-        school_info = schools_dict.get(house.get('school_id'), {})
-        house['school_rating'] = school_info.get('rating', None)
-        house['school_capacity'] = school_info.get('capacity', None)
-        house['school_built_year'] = school_info.get('built_year', None)
+        for house in houses:
+            agent_info = agents_dict.get(house.get('agent_id'), {})
+            house['agent_name'] = agent_info.get('name', 'Unknown')
+            district_info = districts_dict.get(house.get('district_id'), {})
+            house['crime_rating'] = district_info.get('crime_rating', None)
+            house['public_transport_rating'] = district_info.get('public_transport_rating', None)
+            school_info = schools_dict.get(house.get('school_id'), {})
+            house['school_rating'] = school_info.get('rating', None)
+            house['school_capacity'] = school_info.get('capacity', None)
+            house['school_built_year'] = school_info.get('built_year', None)
 
-    add_house_age(houses, current_year=2023)
-    impute_missing_values(houses)
-    encode_categorical(houses)
+        add_house_age(houses, current_year=2023)
+        impute_missing_values(houses)
+        encode_categorical(houses)
 
-    feature_order = [
-        'advertisement',
-        'bathrooms',
-        'condition_rating',
-        'size',
-        'house_age',
-        'crime_rating',
-        'public_transport_rating',
-        'school_rating'
-    ]
+        feature_order = [
+            'advertisement',
+            'bathrooms',
+            'condition_rating',
+            'size',
+            'house_age',
+            'crime_rating',
+            'public_transport_rating',
+            'school_rating'
+        ]
 
-    X, y = prepare_dataset(houses)
+        X, y = prepare_dataset(houses)
 
-    if np.isnan(X).any() or np.isinf(X).any():
-        print("NaN or infinite values detected in feature matrix X.")
-    if np.isnan(y).any() or np.isinf(y).any():
-        print("NaN or infinite values detected in target vector y.")
+        if np.isnan(X).any() or np.isinf(X).any():
+            print("NaN or infinite values detected in feature matrix X.")
+        if np.isnan(y).any() or np.isinf(y).any():
+            print("NaN or infinite values detected in target vector y.")
 
-    X_train, X_test, y_train, y_test = train_test_split_custom(X, y)
+        X_train, X_test, y_train, y_test = train_test_split_custom(X, y)
 
-    # Scale features and target variable
-    scaler_X = StandardScaler()
-    X_train_scaled = scaler_X.fit_transform(X_train)
-    X_test_scaled = scaler_X.transform(X_test)
+        # Scale features and target variable
+        scaler_X = StandardScaler()
+        X_train_scaled = scaler_X.fit_transform(X_train)
+        X_test_scaled = scaler_X.transform(X_test)
 
-    scaler_y = StandardScaler()
-    y_train_scaled = scaler_y.fit_transform(y_train.reshape(-1, 1)).flatten()
-    y_test_scaled = scaler_y.transform(y_test.reshape(-1, 1)).flatten()
+        scaler_y = StandardScaler()
+        y_train_scaled = scaler_y.fit_transform(y_train.reshape(-1, 1)).flatten()
+        y_test_scaled = scaler_y.transform(y_test.reshape(-1, 1)).flatten()
 
-    # Train the model
-    w, b, best_loss = train_linear_regression(X_train_scaled, y_train_scaled, learning_rate=0.001, epochs=2000, batch_size=32)
+        # Train the model
+        w, b, best_loss = train_linear_regression(X_train_scaled, y_train_scaled, learning_rate=0.001, epochs=2000,
+                                                  batch_size=32)
 
-    print(f'Best Loss: {best_loss}')
-    print('Learned Weights:', w)
-    print('Bias:', b)
+        print(f'Best Loss: {best_loss}')
+        print('Learned Weights:', w)
+        print('Bias:', b)
 
-    # Evaluate the model
-    evaluate_model(X_test_scaled, y_test_scaled, w, b)
+        # Evaluate the model
+        evaluate_model(X_test_scaled, y_test_scaled, w, b)
 
-    # Save the model
-    save_model(w, b, scaler_X, scaler_y, feature_order)
+        # Save the model
+        save_model(w, b, scaler_X, scaler_y, feature_order)
 
     app.run(debug=True)
