@@ -1,0 +1,80 @@
+#clear-button {
+    display: block;
+    margin: 20px auto;
+    padding: 10px 20px;
+    background-color: blue;
+    color: white;
+    font-size: 16px;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+#clear-button:hover {
+    background-color: red;
+}
+
+@keyframes blink {
+    0%, 100% {
+        background-color: unset;
+    }
+    25%, 75% {
+        background-color: red;
+    }
+}
+
+.blink {
+    animation: blink 0.5s ease-in-out 2; /* Faster blink effect */
+}
+
+.toggle-input-wrap {
+    position: relative;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 40px; /* Set a fixed height to keep space for the input field */
+}
+
+.toggle-input-wrap input::placeholder {
+    font-size: 10px; /* Adjust the size as needed */
+}
+
+.toggle-input:not(.show) {
+    display: none;
+}
+
+.checkbox-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 15px;
+    margin: 20px auto;
+    width: 80%;
+}
+
+.checkbox-item {
+    text-align: center;
+    font-size: 14px;
+}
+
+.checkbox-item label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+    height: 20px;
+    white-space: nowrap; /* Ensure text is on a single line */
+}
+
+.checkbox-item input[type="checkbox"] {
+    transform: scale(1.5);
+}
+
+.toggle-input {
+    width: 80px;
+    text-align: center;
+}
+
+#predicted-price {
+    font-size: 24px;
+    font-weight: bold;
+    margin-top: 20px;
+}
