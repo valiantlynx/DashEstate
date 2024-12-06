@@ -1,5 +1,6 @@
-dash
-plotly
+dash~=2.18.2
+plotly~=5.24.1
 pandas
 numpy
 matplotlib
+Flask~=3.0.3
