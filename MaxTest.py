@@ -3,7 +3,6 @@ import os
 import numpy as np
 from flask import Flask, request, jsonify, render_template
 import pickle
-from sklearn.preprocessing import StandardScaler
 
 app = Flask(__name__)
 
@@ -14,16 +13,13 @@ def load_jsonl(file_path):
             data.append(json.loads(line))
     return data
 
-# Load data from 'houses.jsonl' to extract unique values and maximums for the HTML page
 data_houses = load_jsonl('data/houses.jsonl')
 data_districts = load_jsonl('data/districts.jsonl')
 data_agents = load_jsonl('data/agents.jsonl')
 data_schools = load_jsonl('data/schools.jsonl')
 
-# Extract unique district ID values for the dropdown
 districts = {item['id'] for item in data_districts}
 
-# Initialize unique values dict
 unique_values = {
     "colors": list(set(item.get("color", "unknown") for item in data_houses)),
     "district_ids": sorted(list(districts)),
@@ -31,68 +27,98 @@ unique_values = {
     "condition_ratings": list(range(11))
 }
 
-# Calculate maximum values for numeric inputs
 maximums = {
     "year": max(item.get("year", 0) for item in data_houses if item.get("year") is not None),
     "remodeled": max(item.get("remodeled", 0) for item in data_houses if item.get("remodeled") is not None),
     "bathrooms": max(item.get("bathrooms", 0) for item in data_houses if item.get("bathrooms") is not None),
-    "days_on_marked": max(item.get("days_on_marked", 0) for item in data_houses if item.get("days_on_marked") is not None),
+    "days_on_marked": max(
+        item.get("days_on_marked", 0) for item in data_houses if item.get("days_on_marked") is not None),
     "external_storage_m2": max(
         item.get("external_storage_m2", 0) for item in data_houses if item.get("external_storage_m2") is not None),
     "kitchens": max(item.get("kitchens", 0) for item in data_houses if item.get("kitchens") is not None),
     "lot_w": max(item.get("lot_w", 0) for item in data_houses if item.get("lot_w") is not None),
     "price": max(item.get("price", 0) for item in data_houses if item.get("price") is not None),
-    "rooms": max(item.get("rooms", 0) for item in data_houses if item.get("rooms") is not None),
-    "storage_rating": max(item.get("storage_rating", 0) for item in data_houses if item.get("storage_rating") is not None),
+    "rooms": max(
+        int(str(item.get("rooms", "0 rooms")).split()[0])
+        for item in data_houses
+        if item.get("rooms") and str(item.get("rooms")).split()
+    ),
+    "storage_rating": max(
+        item.get("storage_rating", 0) for item in data_houses if item.get("storage_rating") is not None),
     "sun_factor": max(item.get("sun_factor", 0) for item in data_houses if item.get("sun_factor") is not None),
 }
 
+
+all_fields = [
+    "advertisement", "agent_id", "bathrooms", "color", "condition_rating",
+    "days_on_marked", "district_id", "external_storage_m2", "fireplace", "kitchens",
+    "lot_w", "parking", "remodeled", "rooms", "school_id", "size", "sold",
+    "sold_in_month", "storage_rating", "sun_factor", "year", "house_age"
+]
+
+categorical_fields = ["advertisement", "agent_id", "color", "district_id", "fireplace", "parking", "school_id", "sold", "sold_in_month"]
+numeric_fields = [f for f in all_fields if f not in categorical_fields]
+
 def impute_missing_values(houses):
-    numerical_features = [
-        'size', 'bathrooms', 'condition_rating',
-        'crime_rating', 'public_transport_rating',
-        'school_rating', 'house_age'
-    ]
-    for feature in numerical_features:
-        values = [house[feature] for house in houses if
-                  house.get(feature) is not None and isinstance(house[feature], (int, float))]
+    for feature in numeric_fields:
+        values = [h[feature] for h in houses if feature in h and isinstance(h[feature], (int, float))]
         if values:
-            mean_value = np.mean(values)
-            for house in houses:
-                if house.get(feature) is None or not isinstance(house.get(feature), (int, float)):
-                    house[feature] = mean_value
+            mean_val = np.mean(values)
+            for h in houses:
+                if feature not in h or not isinstance(h[feature], (int,float)):
+                    h[feature] = mean_val
         else:
-            for house in houses:
-                house[feature] = 0
+            for h in houses:
+                h[feature] = 0
+    for feature in categorical_fields:
+        for h in houses:
+            val = h.get(feature, None)
+            if val is None or not isinstance(val, str) or val.strip()=="":
+                h[feature] = "unknown"
 
-def encode_categorical(houses):
-    advertisement_types = {'regular': 0, 'premium': 1}
-    for house in houses:
-        house['advertisement'] = advertisement_types.get(house.get('advertisement', 'regular'), 0)
+def encode_rooms(h):
+    r = h.get("rooms", "0 rooms")
+    try:
+        num_r = int(str(r).split()[0])
+    except:
+        num_r = 0
+    h["rooms"] = num_r
 
-def add_house_age(houses, current_year):
-    for house in houses:
-        if 'year' in house and house['year'] is not None and isinstance(house['year'], (int, float)):
-            house['house_age'] = current_year - house['year']
+def add_house_age(houses, current_year=2023):
+    for h in houses:
+        if 'year' in h and isinstance(h['year'], (int, float)):
+            h['house_age'] = current_year - h['year']
         else:
-            house['house_age'] = 0
+            h['house_age'] = 0
 
-def prepare_dataset(houses):
+def encode_categorical_fields(houses):
+    cat_maps = {}
+    for f in categorical_fields:
+        cats = set(h[f] for h in houses)
+        cat_maps[f] = {c: i for i, c in enumerate(sorted(cats))}
+    return cat_maps
+
+def apply_categorical_encoding(h, cat_maps):
+    for f in categorical_fields:
+        val = h.get(f, "unknown")
+        if val not in cat_maps[f]:
+            if "unknown" in cat_maps[f]:
+                h[f] = cat_maps[f]["unknown"]
+            else:
+                h[f] = 0
+        else:
+            h[f] = cat_maps[f][val]
+
+def prepare_dataset(houses, cat_maps):
     X = []
     y = []
-    for house in houses:
-        features = [
-            house['advertisement'],
-            house['bathrooms'],
-            house['condition_rating'],
-            house['size'],
-            house['house_age'],
-            house['crime_rating'],
-            house['public_transport_rating'],
-            house['school_rating']
-        ]
-        X.append(features)
-        y.append(house['price'])
+    for h in houses:
+        apply_categorical_encoding(h, cat_maps)
+        row = []
+        for f in all_fields:
+            row.append(float(h[f]))
+        X.append(row)
+        y.append(h['price'])
     return np.array(X, dtype=float), np.array(y, dtype=float)
 
 def train_test_split_custom(X, y, test_size=0.2):
@@ -102,11 +128,7 @@ def train_test_split_custom(X, y, test_size=0.2):
     test_set_size = int(data_size * test_size)
     test_indices = indices[:test_set_size]
     train_indices = indices[test_set_size:]
-    X_train = X[train_indices]
-    y_train = y[train_indices]
-    X_test = X[test_indices]
-    y_test = y[test_indices]
-    return X_train, X_test, y_train, y_test
+    return X[train_indices], X[test_indices], y[train_indices], y[test_indices]
 
 def initialize_parameters(n_features):
     w = np.zeros(n_features)
@@ -158,7 +180,6 @@ def load_state_from_file(file_path):
 def train_linear_regression(X_train, y_train_scaled, learning_rate=0.001, epochs=2000, batch_size=32, state_file='model_state.json'):
     n_samples, n_features = X_train.shape
 
-    # Delete existing model files to ensure retraining with new feature_order
     if os.path.exists(state_file):
         os.remove(state_file)
     if os.path.exists('linear_regression_model.pkl'):
@@ -181,19 +202,18 @@ def train_linear_regression(X_train, y_train_scaled, learning_rate=0.001, epochs
             y_pred_batch = predict(X_batch, best_w, best_b)
             loss = compute_loss(y_batch, y_pred_batch)
             if np.isnan(loss) or np.isinf(loss):
-                print(f"Training stopped due to NaN or Inf loss at epoch {epoch}, batch starting at {start_idx}.")
+                print(f"Training stopped due to NaN/Inf loss at epoch {epoch}, batch {start_idx}.")
                 save_state_to_file(best_w, best_b, best_loss, state_file)
                 return best_w, best_b, best_loss
 
             dw, db = compute_gradients_batch(X_batch, y_batch, y_pred_batch)
             if np.isnan(dw).any() or np.isnan(db) or np.isinf(dw).any() or np.isinf(db):
-                print(f"Invalid gradients at epoch {epoch}, batch starting at {start_idx}.")
+                print(f"Invalid gradients at epoch {epoch}, batch {start_idx}.")
                 save_state_to_file(best_w, best_b, best_loss, state_file)
                 return best_w, best_b, best_loss
 
             best_w, best_b = update_parameters(best_w, best_b, dw, db, learning_rate)
 
-        # Compute the loss over the entire training set for monitoring
         y_pred = predict(X_train, best_w, best_b)
         total_loss = compute_loss(y_train_scaled, y_pred)
 
@@ -217,13 +237,16 @@ def evaluate_model(X_test, y_test_scaled, w, b):
     print(f'Test RMSE: {rmse}')
     print(f'R-squared: {r_squared}')
 
-def save_model(w, b, scaler_X, scaler_y, feature_order, filename='linear_regression_model.pkl'):
+def save_model(w, b, X_train_means, X_train_stds, y_train_mean, y_train_std, feature_order, cat_maps, filename='linear_regression_model.pkl'):
     model = {
         'weights': w,
         'bias': b,
-        'scaler_X': scaler_X,
-        'scaler_y': scaler_y,
-        'feature_order': feature_order
+        'X_train_means': X_train_means,
+        'X_train_stds': X_train_stds,
+        'y_train_mean': y_train_mean,
+        'y_train_std': y_train_std,
+        'feature_order': feature_order,
+        'cat_maps': cat_maps
     }
     with open(filename, 'wb') as f:
         pickle.dump(model, f)
@@ -233,62 +256,86 @@ def load_model(filename='linear_regression_model.pkl'):
     with open(filename, 'rb') as f:
         model = pickle.load(f)
     print(f"Model loaded from {filename}")
-    return model['weights'], model['bias'], model['scaler_X'], model['scaler_y'], model['feature_order']
+    return (model['weights'], model['bias'], model['X_train_means'], model['X_train_stds'],
+            model['y_train_mean'], model['y_train_std'], model['feature_order'], model['cat_maps'])
 
-def preprocess_user_input(house_data, scaler_X, feature_order):
-    processed_data = []
-    for feature in feature_order:
-        if feature == 'advertisement':
-            advertisement_types = {'regular': 0, 'premium': 1}
-            value = advertisement_types.get(house_data.get('advertisement', 'regular'), 0)
+def preprocess_user_input(house_data, feature_order, X_train_means, X_train_stds, cat_maps):
+    if 'year' in house_data and house_data['year'] is not None:
+        try:
+            y = float(house_data['year'])
+            house_data['house_age'] = 2023 - y
+        except:
+            house_data['house_age'] = 0
+    else:
+        house_data['house_age'] = 0
+
+    if 'rooms' in house_data:
+        r_str = str(house_data['rooms'])
+        try:
+            house_data['rooms'] = float(r_str.split()[0])
+        except:
+            house_data['rooms'] = 0
+    else:
+        house_data['rooms'] = 0
+
+    for f in numeric_fields:
+        val = house_data.get(f, None)
+        if val is None:
+            house_data[f] = 0
         else:
-            value = house_data.get(feature, 0)
             try:
-                value = float(value)
-            except (TypeError, ValueError):
-                value = 0
-        processed_data.append(value)
-    # Scale the features
-    processed_data = np.array(processed_data).reshape(1, -1)
-    processed_data_scaled = scaler_X.transform(processed_data)
-    return processed_data_scaled.flatten()
+                house_data[f] = float(val)
+            except:
+                house_data[f] = 0
+
+    for f in categorical_fields:
+        val = house_data.get(f, "unknown")
+        if not val or not isinstance(val, str):
+            val = "unknown"
+        if val not in cat_maps[f]:
+            if "unknown" in cat_maps[f]:
+                val = "unknown"
+            else:
+                val = list(cat_maps[f].keys())[0]
+        house_data[f] = cat_maps[f][val]
+
+    processed_data = [float(house_data.get(f,0)) for f in feature_order]
+    processed_data = np.array(processed_data)
+    processed_data_scaled = (processed_data - X_train_means) / X_train_stds
+    return processed_data_scaled
 
 @app.route('/')
 def index():
-    return render_template('index.html', unique_values=unique_values, maximums=maximums)
+    # Prepare dropdown lists
+    agent_ids = sorted({a['agent_id'] for a in data_agents if 'agent_id' in a})
+    district_ids_list = sorted({d['id'] for d in data_districts if 'id' in d})
+    school_ids_list = sorted({s['id'] for s in data_schools if 'id' in s})
+
+    # If no known category, we can rely on 'unknown'
+    colors_list = sorted(unique_values["colors"])
+
+    # Define months
+    months_list = ["unknown","January","February","March","April","May","June","July","August","September","October","November","December"]
+
+    return render_template('index.html',
+                           unique_values=unique_values,
+                           maximums=maximums,
+                           agent_ids=agent_ids,
+                           district_ids_list=district_ids_list,
+                           school_ids_list=school_ids_list,
+                           colors_list=colors_list,
+                           months_list=months_list
+                           )
 
 @app.route('/predict', methods=['POST'])
 def predict_route():
     user_input = request.get_json()
-    w, b, scaler_X, scaler_y, feature_order = load_model()
+    w, b, X_train_means, X_train_stds, y_train_mean, y_train_std, feature_order, cat_maps = load_model()
 
-    model_input = {}
-    for feature in feature_order:
-        if feature == 'house_age':
-            try:
-                year = int(user_input.get('year', 2023))
-                value = 2023 - year
-            except (ValueError, TypeError):
-                value = 0
-        elif feature == 'advertisement':
-            value = 'premium' if user_input.get('advertisement', False) else 'regular'
-        else:
-            value = user_input.get(feature, 0)
-            try:
-                value = float(value)
-            except (TypeError, ValueError):
-                value = 0
-        model_input[feature] = value
-
-    # Encode categorical features
-    encode_categorical([model_input])
-
-    # Preprocess input
-    features_scaled = preprocess_user_input(model_input, scaler_X, feature_order)
+    features_scaled = preprocess_user_input(user_input, feature_order, X_train_means, X_train_stds, cat_maps)
     predicted_price_scaled = predict(features_scaled.reshape(1, -1), w, b)
-
-    predicted_price = scaler_y.inverse_transform(predicted_price_scaled.reshape(-1, 1))[0][0]
-    rounded_price = round(predicted_price, 2)
+    predicted_price = (predicted_price_scaled * y_train_std) + y_train_mean
+    rounded_price = round(predicted_price.item(), 2)
     return jsonify({'price': rounded_price}), 200
 
 @app.route('/about')
@@ -306,13 +353,35 @@ def list_routes():
         }
         route_list.append(route_info)
     return jsonify(route_list), 200
+
 if __name__ == '__main__':
     if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
-        # Put your training code here
         agents = load_jsonl('data/agents.jsonl')
         districts = load_jsonl('data/districts.jsonl')
         schools = load_jsonl('data/schools.jsonl')
         houses = load_jsonl('data/houses.jsonl')
+
+        for h in houses:
+            if 'rooms' not in h:
+                h['rooms'] = "0 rooms"
+            if 'advertisement' not in h:
+                h['advertisement'] = "unknown"
+            if 'fireplace' not in h:
+                h['fireplace'] = "unknown"
+            if 'parking' not in h:
+                h['parking'] = "unknown"
+            if 'sold' not in h:
+                h['sold'] = "unknown"
+            if 'sold_in_month' not in h:
+                h['sold_in_month'] = "unknown"
+            if 'color' not in h:
+                h['color'] = "unknown"
+            if 'agent_id' not in h:
+                h['agent_id'] = "unknown"
+            if 'district_id' not in h:
+                h['district_id'] = "unknown"
+            if 'school_id' not in h:
+                h['school_id'] = "unknown"
 
         agents_dict = {agent['agent_id']: agent for agent in agents}
         districts_dict = {district['id']: district for district in districts}
@@ -329,22 +398,13 @@ if __name__ == '__main__':
             house['school_capacity'] = school_info.get('capacity', None)
             house['school_built_year'] = school_info.get('built_year', None)
 
+        for h in houses:
+            encode_rooms(h)
+
         add_house_age(houses, current_year=2023)
         impute_missing_values(houses)
-        encode_categorical(houses)
-
-        feature_order = [
-            'advertisement',
-            'bathrooms',
-            'condition_rating',
-            'size',
-            'house_age',
-            'crime_rating',
-            'public_transport_rating',
-            'school_rating'
-        ]
-
-        X, y = prepare_dataset(houses)
+        cat_maps = encode_categorical_fields(houses)
+        X, y = prepare_dataset(houses, cat_maps)
 
         if np.isnan(X).any() or np.isinf(X).any():
             print("NaN or infinite values detected in feature matrix X.")
@@ -353,27 +413,27 @@ if __name__ == '__main__':
 
         X_train, X_test, y_train, y_test = train_test_split_custom(X, y)
 
-        # Scale features and target variable
-        scaler_X = StandardScaler()
-        X_train_scaled = scaler_X.fit_transform(X_train)
-        X_test_scaled = scaler_X.transform(X_test)
+        X_train_means = np.mean(X_train, axis=0)
+        X_train_stds = np.std(X_train, axis=0)
+        X_train_stds[X_train_stds == 0] = 1
+        X_train_scaled = (X_train - X_train_means) / X_train_stds
+        X_test_scaled = (X_test - X_train_means) / X_train_stds
 
-        scaler_y = StandardScaler()
-        y_train_scaled = scaler_y.fit_transform(y_train.reshape(-1, 1)).flatten()
-        y_test_scaled = scaler_y.transform(y_test.reshape(-1, 1)).flatten()
+        y_train_mean = np.mean(y_train)
+        y_train_std = np.std(y_train)
+        if y_train_std == 0:
+            y_train_std = 1
+        y_train_scaled = (y_train - y_train_mean) / y_train_std
+        y_test_scaled = (y_test - y_train_mean) / y_train_std
 
-        # Train the model
         w, b, best_loss = train_linear_regression(X_train_scaled, y_train_scaled, learning_rate=0.001, epochs=2000,
                                                   batch_size=32)
-
         print(f'Best Loss: {best_loss}')
         print('Learned Weights:', w)
         print('Bias:', b)
 
-        # Evaluate the model
         evaluate_model(X_test_scaled, y_test_scaled, w, b)
 
-        # Save the model
-        save_model(w, b, scaler_X, scaler_y, feature_order)
+        save_model(w, b, X_train_means, X_train_stds, y_train_mean, y_train_std, all_fields, cat_maps)
 
     app.run(debug=True)
