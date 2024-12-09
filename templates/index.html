@@ -4,134 +4,181 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>KKD - Real Estate Dashboard</title>
-    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='styles.css') }}">
+    <link rel="stylesheet" href="static/styles.css">
 </head>
 <body>
     <h3 style="text-align: center; font-size: 40px">KKD - Real Estate Dashboard</h3>
     <hr>
     <button id="clear-button">Clear All Filters</button>
-    <div class="checkbox-grid">
-        <!-- Built Year (Mapped to House Age) -->
-        <div class="checkbox-item">
-            <label for="year">Built Year</label>
-            <input type="checkbox" id="year" onchange="toggleInput(event, 'year-input')">
-            <div class="toggle-input-wrap">
-                <input type="number" id="year-input" class="toggle-input" placeholder="Enter Built Year" min="1900" max="2030">
-            </div>
-        </div>
-        <!-- Advertisement -->
-        <div class="checkbox-item">
+    <div class="input-grid">
+
+        <!-- Categorical Fields -->
+        <!-- advertisement -->
+        <div class="input-item">
             <label for="advertisement">Advertisement</label>
-            <input type="checkbox" id="advertisement" onchange="toggleAdvertisement(event)">
+            <select id="advertisement" class="toggle-input" onchange="fetchPrediction()">
+                <option value="">Select Advertisement Type</option>
+                <option value="no">No</option>
+                <option value="premium">Premium</option>
+                <option value="regular">Regular</option>
+                <option value="unknown">Unknown</option>
+            </select>
         </div>
-        <!-- Size -->
-        <div class="checkbox-item">
-            <label for="size">Size</label>
-            <input type="checkbox" id="size" onchange="toggleInput(event, 'size-input')">
-            <div class="toggle-input-wrap">
-                <input type="number" id="size-input" class="toggle-input" placeholder="Enter Size" min="0">
-            </div>
+        <!-- agent_id -->
+        <div class="input-item">
+            <label for="agent_id">Agent ID</label>
+            <select id="agent_id" class="toggle-input" onchange="fetchPrediction()">
+                <option value="">Select Agent ID</option>
+                {% for a_id in agent_ids %}
+                <option value="{{ a_id }}">{{ a_id }}</option>
+                {% endfor %}
+                <option value="unknown">unknown</option>
+            </select>
         </div>
-        <!-- Bathrooms -->
-        <div class="checkbox-item">
+        <!-- color -->
+        <div class="input-item">
+            <label for="color">Color</label>
+            <select id="color" class="toggle-input" onchange="fetchPrediction()">
+                <option value="">Select Color</option>
+                {% for c in colors_list %}
+                <option value="{{ c }}">{{ c }}</option>
+                {% endfor %}
+                <option value="unknown">unknown</option>
+            </select>
+        </div>
+        <!-- district_id -->
+        <div class="input-item">
+            <label for="district_id">District ID</label>
+            <select id="district_id" class="toggle-input" onchange="fetchPrediction()">
+                <option value="">Select District ID</option>
+                {% for d_id in district_ids_list %}
+                <option value="{{ d_id }}">{{ d_id }}</option>
+                {% endfor %}
+                <option value="unknown">unknown</option>
+            </select>
+        </div>
+        <!-- fireplace -->
+        <div class="input-item">
+            <label for="fireplace">Fireplace</label>
+            <select id="fireplace" class="toggle-input" onchange="fetchPrediction()">
+                <option value="">Select Fireplace</option>
+                <option value="no">No</option>
+                <option value="yes">Yes</option>
+                <option value="unknown">unknown</option>
+            </select>
+        </div>
+        <!-- parking -->
+        <div class="input-item">
+            <label for="parking">Parking</label>
+            <select id="parking" class="toggle-input" onchange="fetchPrediction()">
+                <option value="">Select Parking</option>
+                <option value="no">No</option>
+                <option value="yes">Yes</option>
+                <option value="unknown">unknown</option>
+            </select>
+        </div>
+        <!-- school_id -->
+        <div class="input-item">
+            <label for="school_id">School ID</label>
+            <select id="school_id" class="toggle-input" onchange="fetchPrediction()">
+                <option value="">Select School ID</option>
+                {% for s_id in school_ids_list %}
+                <option value="{{ s_id }}">{{ s_id }}</option>
+                {% endfor %}
+                <option value="unknown">unknown</option>
+            </select>
+        </div>
+        <!-- sold -->
+        <div class="input-item">
+            <label for="sold">Sold</label>
+            <select id="sold" class="toggle-input" onchange="fetchPrediction()">
+                <option value="">Select Sold</option>
+                <option value="no">No</option>
+                <option value="yes">Yes</option>
+                <option value="unknown">unknown</option>
+            </select>
+        </div>
+        <!-- sold_in_month -->
+        <div class="input-item">
+            <label for="sold_in_month">Sold in Month</label>
+            <select id="sold_in_month" class="toggle-input" onchange="fetchPrediction()">
+                <option value="">Select Month</option>
+                {% for m in months_list %}
+                <option value="{{ m }}">{{ m }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Numeric Fields -->
+        <!-- year -->
+        <div class="input-item">
+            <label for="year">Year</label>
+            <input type="number" id="year" class="toggle-input" placeholder="Enter Year" min="1900" max="2030" oninput="fetchPrediction()">
+        </div>
+        <!-- bathrooms -->
+        <div class="input-item">
             <label for="bathrooms">Bathrooms</label>
-            <input type="checkbox" id="bathrooms" onchange="toggleInput(event, 'bathrooms-input')">
-            <div class="toggle-input-wrap">
-                <input type="number" id="bathrooms-input" class="toggle-input" placeholder="Enter Number of Bathrooms" min="0">
-            </div>
+            <input type="number" id="bathrooms" class="toggle-input" placeholder="Enter Bathrooms" min="0" oninput="fetchPrediction()">
         </div>
-        <!-- Condition Rating -->
-        <div class="checkbox-item">
+        <!-- condition_rating -->
+        <div class="input-item">
             <label for="condition_rating">Condition Rating</label>
-            <input type="checkbox" id="condition_rating" onchange="toggleInput(event, 'condition_rating-input')">
-            <div class="toggle-input-wrap">
-                <select id="condition_rating-input" class="toggle-input">
-                    <option value="">Select Condition Rating</option>
-                    {% for cond_rating in unique_values.condition_ratings %}
-                    <option value="{{ cond_rating }}">{{ cond_rating }}</option>
-                    {% endfor %}
-                </select>
-            </div>
+            <input type="number" id="condition_rating" class="toggle-input" placeholder="Enter Condition Rating" min="0" oninput="fetchPrediction()">
         </div>
-        <!-- Crime Rating -->
-        <div class="checkbox-item">
-            <label for="crime_rating">Crime Rating</label>
-            <input type="checkbox" id="crime_rating" onchange="toggleInput(event, 'crime_rating-input')">
-            <div class="toggle-input-wrap">
-                <select id="crime_rating-input" class="toggle-input">
-                    <option value="">Select Crime Rating</option>
-                    {% for rating in unique_values.condition_ratings %}
-                    <option value="{{ rating }}">{{ rating }}</option>
-                    {% endfor %}
-                </select>
-            </div>
+        <!-- days_on_marked -->
+        <div class="input-item">
+            <label for="days_on_marked">Days on Market</label>
+            <input type="number" step="0.1" id="days_on_marked" class="toggle-input" placeholder="e.g. 30.7" oninput="fetchPrediction()">
         </div>
-        <!-- Public Transport Rating -->
-        <div class="checkbox-item">
-            <label for="public_transport_rating">Public Transport Rating</label>
-            <input type="checkbox" id="public_transport_rating" onchange="toggleInput(event, 'public_transport_rating-input')">
-            <div class="toggle-input-wrap">
-                <select id="public_transport_rating-input" class="toggle-input">
-                    <option value="">Select Public Transport Rating</option>
-                    {% for rating in unique_values.condition_ratings %}
-                    <option value="{{ rating }}">{{ rating }}</option>
-                    {% endfor %}
-                </select>
-            </div>
+        <!-- external_storage_m2 -->
+        <div class="input-item">
+            <label for="external_storage_m2">External Storage (m2)</label>
+            <input type="number" id="external_storage_m2" class="toggle-input" placeholder="Enter Ext. Storage" min="0" oninput="fetchPrediction()">
         </div>
-        <!-- School Rating -->
-        <div class="checkbox-item">
-            <label for="school_rating">School Rating</label>
-            <input type="checkbox" id="school_rating" onchange="toggleInput(event, 'school_rating-input')">
-            <div class="toggle-input-wrap">
-                <select id="school_rating-input" class="toggle-input">
-                    <option value="">Select School Rating</option>
-                    {% for rating in unique_values.condition_ratings %}
-                    <option value="{{ rating }}">{{ rating }}</option>
-                    {% endfor %}
-                </select>
-            </div>
+        <!-- kitchens -->
+        <div class="input-item">
+            <label for="kitchens">Kitchens</label>
+            <input type="number" id="kitchens" class="toggle-input" placeholder="Enter Kitchens" min="0" oninput="fetchPrediction()">
+        </div>
+        <!-- lot_w -->
+        <div class="input-item">
+            <label for="lot_w">Lot W</label>
+            <input type="number" id="lot_w" class="toggle-input" placeholder="Enter Lot W" min="0" oninput="fetchPrediction()">
+        </div>
+        <!-- remodeled -->
+        <div class="input-item">
+            <label for="remodeled">Remodeled (Year)</label>
+            <input type="number" id="remodeled" class="toggle-input" placeholder="Enter Remodeled Year" min="1900" max="2030" oninput="fetchPrediction()">
+        </div>
+        <!-- rooms -->
+        <div class="input-item">
+            <label for="rooms">Rooms</label>
+            <input type="text" id="rooms" class="toggle-input" placeholder="e.g. '3 rooms'" oninput="fetchPrediction()">
+        </div>
+        <!-- size -->
+        <div class="input-item">
+            <label for="size">Size</label>
+            <input type="number" id="size" class="toggle-input" placeholder="Enter Size" min="0" oninput="fetchPrediction()">
+        </div>
+        <!-- storage_rating -->
+        <div class="input-item">
+            <label for="storage_rating">Storage Rating</label>
+            <input type="number" id="storage_rating" class="toggle-input" placeholder="Enter Storage Rating" min="0" oninput="fetchPrediction()">
+        </div>
+        <!-- sun_factor -->
+        <div class="input-item">
+            <label for="sun_factor">Sun Factor</label>
+            <input type="number" step="0.001" id="sun_factor" class="toggle-input" placeholder="e.g. 0.595" oninput="fetchPrediction()">
         </div>
     </div>
     <hr>
     <div id="predicted-price"></div>
 
 <script>
-    function toggleInput(event, inputId) {
-        const input = document.getElementById(inputId);
-        input.classList.toggle('show', event.target.checked);
-        fetchPrediction();
-    }
-
-    function toggleAdvertisement(event) {
-        // Directly trigger prediction when advertisement checkbox is toggled
-        fetchPrediction();
-    }
-
     function fetchPrediction() {
         const inputs = {};
-
-        // Collect all active inputs
-        document.querySelectorAll('.checkbox-item').forEach(item => {
-            const checkbox = item.querySelector('input[type="checkbox"]');
-            if (checkbox.checked) {
-                const inputElement = item.querySelector('.toggle-input');
-                if (inputElement) {
-                    if (inputElement.tagName.toLowerCase() === 'input') {
-                        inputs[inputElement.id.replace('-input', '')] = inputElement.value || null;
-                    } else if (inputElement.tagName.toLowerCase() === 'select') {
-                        inputs[inputElement.id.replace('-input', '')] = inputElement.value || null;
-                    }
-                } else if (checkbox.id === 'advertisement') {
-                    // Set 'premium' if advertisement is checked
-                    inputs['advertisement'] = true;
-                }
-            } else {
-                if (checkbox.id === 'advertisement') {
-                    // Set 'regular' if advertisement is unchecked
-                    inputs['advertisement'] = false;
-                }
-            }
+        document.querySelectorAll('.input-item input, .input-item select').forEach(input => {
+            inputs[input.id] = input.value || null;
         });
 
         fetch('/predict', {
@@ -139,49 +186,26 @@
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(inputs)
         })
-            .then(response => response.json())
-            .then(data => {
-                if (data.price) {
-                    const formattedPrice = data.price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
-                    document.getElementById('predicted-price').innerHTML = `<div style="text-align: center; font-size: 40px">Estimated Price: ${formattedPrice}</div>`;
-                } else if (data.error) {
-                    document.getElementById('predicted-price').innerHTML = `<div style="text-align: center; font-size: 24px; color: red;">Error: ${data.error}</div>`;
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                document.getElementById('predicted-price').innerHTML = `<div style="text-align: center; font-size: 24px; color: red;">An error occurred while fetching the prediction.</div>`;
-            });
+        .then(response => response.json())
+        .then(data => {
+            if (data.price) {
+                const formattedPrice = data.price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+                document.getElementById('predicted-price').innerHTML = `<div style="text-align: center; font-size: 40px">Estimated Price: ${formattedPrice}</div>`;
+            } else if (data.error) {
+                document.getElementById('predicted-price').innerHTML = `<div style="text-align: center; font-size: 24px; color: red;">Error: ${data.error}</div>`;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('predicted-price').innerHTML = `<div style="text-align: center; font-size: 24px; color: red;">An error occurred while fetching the prediction.</div>`;
+        });
     }
 
     document.getElementById('clear-button').addEventListener('click', () => {
-        const checkedElements = document.querySelectorAll('.checkbox-item input[type="checkbox"]:checked');
-        checkedElements.forEach(checkbox => {
-            checkbox.checked = false;
-            const checkboxItem = checkbox.closest('.checkbox-item');
-            if (checkboxItem) checkboxItem.classList.add('blink');
-        });
-
-        document.querySelectorAll('.toggle-input').forEach(input => {
+        document.querySelectorAll('.input-item input, .input-item select').forEach(input => {
             input.value = '';
-            input.classList.remove('show');
         });
-
         fetchPrediction();
-
-        setTimeout(() => {
-            const elements = document.querySelectorAll('.blink');
-            elements.forEach(el => el.classList.remove('blink'));
-        }, 500);
-    });
-
-    // Add event listeners to inputs that should trigger prediction
-    document.querySelectorAll('.checkbox-item input[type="number"], .checkbox-item select').forEach(el => {
-        el.addEventListener('input', fetchPrediction);
-    });
-
-    document.querySelectorAll('.checkbox-item input[type="checkbox"]').forEach(el => {
-        el.addEventListener('change', fetchPrediction);
     });
 </script>
 </body>
