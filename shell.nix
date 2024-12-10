@@ -15,6 +15,7 @@ pkgs.mkShell {
     pkgs.python3Packages.jupyter
     pkgs.python3Packages.scikit-learn
     pkgs.python3Packages.flask
+    pkgs.python3Packages.numba
     pkgs.uv
   ];
 
