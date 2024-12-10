@@ -2,8 +2,11 @@ import numpy as np
 import plotly.express as px
 import plotly.graph_objects as go
 
+from Tasks.Task1 import best_loss
+
+
 #Gradient er innen matematikk en vektor som angir hvor raskt og i hvilken retning en funksjon endrer seg.
-# y_hat - y = gradient.
+# y_hat - y = gradient. for å finne gradient så må vi derivere loss function.
 def gradient_of_J(theta, x, y):
     #
     y_hat = theta
@@ -31,12 +34,12 @@ initial_theta = 5.5
 x_train = np.arange(0.0, 1.0, 0.025)
 
 #
-learning_rate = 1.8
+learning_rate = 1
 theta = np.array([initial_theta])
 np.random.seed(42)
 m = x_train.shape[0]
 y_train = 0.4 + x_train * 0.55 + np.random.randn(x_train.shape[0]) * 0.2
-print("y_train: ", y_train)
+#print("y_train: ", y_train)
 
 n_steps = 19
 
@@ -59,9 +62,9 @@ for steps in range(n_steps):
     mean_gradient = (1 / m) * gradient_theta_sum
     loss = calculate_l2_loss_non_vectorized(theta, x_train, y_train)
 
-    print(
-        "[step {}] theta: {:.2f} => loss: {:.2f}".format(steps, theta.item(), loss.item()))
-    print("[visit] theta: {:.2f} => loss: {:.2f}".format(theta.item(), loss.item()))
+    #print(
+     #   "[step {}] theta: {:.2f} => loss: {:.2f}".format(steps, theta.item(), loss.item()))
+    #print("[visit] theta: {:.2f} => loss: {:.2f}".format(theta.item(), loss.item()))
 
     # update theta using GD
     theta = theta - (learning_rate * mean_gradient)
@@ -72,12 +75,13 @@ for steps in range(n_steps):
 loss_x = np.arange(-4, 6, 0.01)
 #Beregner loss til alle de 1000 punktene, istednfor x_Train med y verdiene.
 loss_y = np.array([calculate_l2_loss_non_vectorized(t, x_train, y_train) for t in loss_x])
-print("loss_y: ", loss_y)
+#xprint("loss_y: ", loss_y)
 #plotter en blå linje for generisk loss.
 fig = px.line(x=loss_x, y=loss_y, title="GD History : Marks are iterations.")
 #Tar alle theta veridene. fra search history.
 x_visit, _ = list(zip(*search_history))
 x_visit = np.concatenate(x_visit)
+print(best_loss)
 #Beregner loss til alle theta verdiene våre sammen med y verdiene-
 y_visit = np.array([calculate_l2_loss_non_vectorized(t, x_train, y_train) for t in x_visit])
 # legge til på samme plot som tidligere.
