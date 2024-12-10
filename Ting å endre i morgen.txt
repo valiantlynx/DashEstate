@@ -1,0 +1,49 @@
+Ting å endre i morgen:
+(!): LAG EN PRESENTASJON
+(!): i) What is a fair price for our ad packages? 
+	j) How is our best agent?
+		h) Task KKD 2.0
+
+1. one hot encoding på farge på hus? og generelt på alle dropdown felt.
+2. skift ut agent_id med agent_navn.
+3. fjern sold.
+
+
+1. Clean the Data.
+	- houses --> linje 2327: "reds" --> "red"
+	- 34 hus har ikke year feltet i hus json fila.
+	- 
+2. * Make sure you identify how a linear classifier will be affected by the encoding scheme. 
+
+	- Farger på hus er representert som integers, dette blir feil fordi den fargen med høyest integer 	vil gjøre prisen høyere, 
+
+
+	- Year og remodeled er ikke håndtert optimalt, ettersom prisen går ned om huset er bygget for 1 	år siden og prisen går opp om huset var bygget for 100 år siden. samtidig vil prisen gå ned om 	huset fra 1900 blir remodeled 2000 det prisen vil gå ned.
+
+
+3. * How do you handle missing data?
+	- numeriske verdier er erstattet med gjennomsnitts verdien til feltet gjennom alle husene.
+	- kategori felt er erstattet med "unknown" om det ikke er noen verdier i det feltet på ett hus.
+	
+
+4. * How are the different features connected?
+
+	- hus er koblet til District som er koblet til crime og transport rating.
+	- hus er koblet til School id som er koblet til School rating, capacity and built year.
+	- hus har en agend id som er koblet til navn.
+
+2)
+
+1.  Identify objectives that could be valuable for KKD Real Estate, the objectives comes in two flavors:
+	- ikke gjort.
+¨	- 
+
+
+3. Train a model 
+	- ferdig med en modell
+
+4. implemnet Dashboard.
+	- ferdig med Dashboard ish.
+
+5. Weights, forklaring. 
+
