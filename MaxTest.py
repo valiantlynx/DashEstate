@@ -59,7 +59,7 @@ maximums = {
 all_fields = [
     "advertisement", "agent_id", "bathrooms", "condition_rating",
     "days_on_marked", "external_storage_m2", "fireplace", "kitchens",
-    "lot_w", "parking", "remodeled", "rooms", "size", "sold",
+    "lot_w", "parking", "years_since_remodeled", "rooms", "size", "sold",
     "sold_in_month", "storage_rating", "sun_factor", "year", "house_age",
     "crime_rating", "public_transport_rating", "school_rating", "capacity", "built_year"
     # Note: 'color' is removed from 'all_fields' as we are using one-hot encoding for it
@@ -70,7 +70,7 @@ categorical_fields = ["advertisement", "agent_id", "fireplace", "parking", "sold
 
 numeric_fields = [
     "bathrooms", "condition_rating", "days_on_marked", "external_storage_m2",
-    "kitchens", "lot_w", "parking", "remodeled", "rooms", "size", "storage_rating",
+    "kitchens", "lot_w", "parking", "years_since_remodeled", "rooms", "size", "storage_rating",
     "sun_factor", "year", "house_age", "crime_rating", "public_transport_rating",
     "school_rating", "capacity", "built_year"
 ]
@@ -385,6 +385,26 @@ def preprocess_user_input(house_data, feature_order, X_train_means, X_train_stds
         house_data['capacity'] = 0
         house_data['built_year'] = 0
 
+    # Process 'remodeled' field
+    if 'remodeled' in house_data:
+        if house_data['remodeled'] == -1:
+            house_data['years_since_remodeled'] = 0  # Indicates never remodeled
+        else:
+            try:
+                remodeled_year = float(house_data['remodeled'])
+                house_data['years_since_remodeled'] = 2023 - remodeled_year
+                if house_data['years_since_remodeled'] < 0:
+                    house_data['years_since_remodeled'] = 0  # Handle future years gracefully
+            except:
+                house_data['years_since_remodeled'] = 0
+    else:
+        house_data['years_since_remodeled'] = 0
+
+    # Remove or rename 'remodeled' if necessary
+    # For this implementation, we'll remove 'remodeled' as we have 'years_since_remodeled'
+    if 'remodeled' in house_data:
+        del house_data['remodeled']
+
     # Process other categorical fields
     for f in categorical_fields:
         if f in ['advertisement', 'agent_id']:
@@ -427,6 +447,8 @@ def preprocess_user_input(house_data, feature_order, X_train_means, X_train_stds
             color_val = f[len('color_'):]
             idx = color_categories.index(color_val)
             processed_data.append(house_data['color_onehot'][idx])
+        elif f == 'years_since_remodeled':
+            processed_data.append(float(house_data.get('years_since_remodeled', 0)))
         elif f in ['crime_rating', 'public_transport_rating', 'school_rating', 'capacity', 'built_year']:
             processed_data.append(float(house_data.get(f, 0)))
         else:
@@ -522,6 +544,8 @@ if __name__ == '__main__':
                 h['district_id'] = "unknown"
             if 'school_id' not in h:
                 h['school_id'] = "unknown"
+            if 'remodeled' not in h:
+                h['remodeled'] = -1  # Assume -1 if missing
 
         # Populate additional features from districts and schools
         for house in houses:
@@ -550,6 +574,22 @@ if __name__ == '__main__':
             encode_rooms(h)
 
         add_house_age(houses, current_year=2023)
+
+        # Handle 'remodeled' field: Replace -1 with 0 (never remodeled), else compute years since remodeled
+        for h in houses:
+            if h['remodeled'] == -1:
+                h['years_since_remodeled'] = 0  # Indicates never remodeled
+            else:
+                try:
+                    remodeled_year = float(h['remodeled'])
+                    h['years_since_remodeled'] = 2023 - remodeled_year
+                    if h['years_since_remodeled'] < 0:
+                        h['years_since_remodeled'] = 0  # Handle future years gracefully
+                except:
+                    h['years_since_remodeled'] = 0
+            # Remove the original 'remodeled' field as we have 'years_since_remodeled'
+            del h['remodeled']
+
         impute_missing_values(houses)
 
         # One-hot encode the "advertisement" field
