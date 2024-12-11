@@ -18,13 +18,16 @@ data_districts = load_jsonl('data/districts.jsonl')
 data_agents = load_jsonl('data/agents.jsonl')
 data_schools = load_jsonl('data/schools.jsonl')
 
-districts = {item['id'] for item in data_districts}
+# Create dictionaries for quick lookup
+districts_dict = {district['id']: district for district in data_districts}
+schools_dict = {school['id']: school for school in data_schools}
 
+# Define unique values and maximums
 unique_values = {
     "colors": list(set(item.get("color", "unknown") for item in data_houses)),
-    "district_ids": sorted(list(districts)),
     "ratings": list(range(6)),
-    "condition_ratings": list(range(11))
+    "condition_ratings": list(range(11)),
+    "advertisement_types": ["no", "premium", "regular", "unknown"]
 }
 
 maximums = {
@@ -46,21 +49,31 @@ maximums = {
     "storage_rating": max(
         item.get("storage_rating", 0) for item in data_houses if item.get("storage_rating") is not None),
     "sun_factor": max(item.get("sun_factor", 0) for item in data_houses if item.get("sun_factor") is not None),
+    "crime_rating": max(district.get("crime_rating", 0) for district in data_districts),
+    "public_transport_rating": max(district.get("public_transport_rating", 0) for district in data_districts),
+    "school_rating": max(school.get("rating", 0) for school in data_schools),
+    "school_capacity": max(school.get("capacity", 0) for school in data_schools),
+    "school_built_year": max(school.get("built_year", 0) for school in data_schools)
 }
-
 
 all_fields = [
     "advertisement", "agent_id", "bathrooms", "condition_rating",
-    "days_on_marked", "district_id", "external_storage_m2", "fireplace", "kitchens",
-    "lot_w", "parking", "remodeled", "rooms", "school_id", "size", "sold",
-    "sold_in_month", "storage_rating", "sun_factor", "year", "house_age"
+    "days_on_marked", "external_storage_m2", "fireplace", "kitchens",
+    "lot_w", "parking", "remodeled", "rooms", "size", "sold",
+    "sold_in_month", "storage_rating", "sun_factor", "year", "house_age",
+    "crime_rating", "public_transport_rating", "school_rating", "capacity", "built_year"
     # Note: 'color' is removed from 'all_fields' as we are using one-hot encoding for it
 ]
 
-categorical_fields = ["advertisement", "agent_id", "district_id", "fireplace", "parking", "school_id", "sold", "sold_in_month"]
+categorical_fields = ["advertisement", "agent_id", "fireplace", "parking", "sold", "sold_in_month"]
 # 'color' is handled separately for one-hot encoding
 
-numeric_fields = [f for f in all_fields if f not in categorical_fields]
+numeric_fields = [
+    "bathrooms", "condition_rating", "days_on_marked", "external_storage_m2",
+    "kitchens", "lot_w", "parking", "remodeled", "rooms", "size", "storage_rating",
+    "sun_factor", "year", "house_age", "crime_rating", "public_transport_rating",
+    "school_rating", "capacity", "built_year"
+]
 
 def impute_missing_values(houses):
     for feature in numeric_fields:
@@ -126,22 +139,32 @@ def one_hot_encode_field(houses, field):
             if "unknown" in value_to_index:
                 one_hot_vector[value_to_index["unknown"]] = 1
         h[f"{field}_onehot"] = one_hot_vector
-        print("one_hot_func= ",unique_values,one_hot_vector)
+        print(f"one_hot_func= {unique_values}, {one_hot_vector}")
     return unique_values
 
-def prepare_dataset(houses, cat_maps, feature_order, color_categories):
+def prepare_dataset(houses, cat_maps, feature_order, advertisement_categories, agent_id_categories, color_categories):
     X = []
     y = []
     for h in houses:
         apply_categorical_encoding(h, cat_maps)
         row = []
+        # Include one-hot encoded 'advertisement' field
+        for adv_value in advertisement_categories:
+            idx = advertisement_categories.index(adv_value)
+            row.append(h['advertisement_onehot'][idx])
+
+        # Include one-hot encoded 'agent_id' field
+        for agent_value in agent_id_categories:
+            idx = agent_id_categories.index(agent_value)
+            row.append(h['agent_id_onehot'][idx])
+
         # Include one-hot encoded 'color' field
         for color_value in color_categories:
             idx = color_categories.index(color_value)
             row.append(h['color_onehot'][idx])
 
-        # Include other features based on 'feature_order'
-        for f in feature_order[len(color_categories):]:  # Skip the one-hot color fields
+        # Include other numeric features based on 'feature_order'
+        for f in feature_order[len(advertisement_categories) + len(agent_id_categories) + len(color_categories):]:
             row.append(float(h[f]))
         X.append(row)
         y.append(h['price'])
@@ -263,7 +286,8 @@ def evaluate_model(X_test, y_test_scaled, w, b):
     print(f'Test RMSE: {rmse}')
     print(f'R-squared: {r_squared}')
 
-def save_model(w, b, X_train_means, X_train_stds, y_train_mean, y_train_std, feature_order, cat_maps, color_categories, filename='linear_regression_model.pkl'):
+def save_model(w, b, X_train_means, X_train_stds, y_train_mean, y_train_std, feature_order, cat_maps,
+               advertisement_categories, agent_id_categories, color_categories, filename='linear_regression_model.pkl'):
     model = {
         'weights': w,
         'bias': b,
@@ -273,6 +297,8 @@ def save_model(w, b, X_train_means, X_train_stds, y_train_mean, y_train_std, fea
         'y_train_std': y_train_std,
         'feature_order': feature_order,
         'cat_maps': cat_maps,
+        'advertisement_categories': advertisement_categories,
+        'agent_id_categories': agent_id_categories,
         'color_categories': color_categories
     }
     with open(filename, 'wb') as f:
@@ -284,9 +310,11 @@ def load_model(filename='linear_regression_model.pkl'):
         model = pickle.load(f)
     print(f"Model loaded from {filename}")
     return (model['weights'], model['bias'], model['X_train_means'], model['X_train_stds'],
-            model['y_train_mean'], model['y_train_std'], model['feature_order'], model['cat_maps'], model['color_categories'])
+            model['y_train_mean'], model['y_train_std'], model['feature_order'], model['cat_maps'],
+            model['advertisement_categories'], model['agent_id_categories'], model['color_categories'])
 
-def preprocess_user_input(house_data, feature_order, X_train_means, X_train_stds, cat_maps, color_categories):
+def preprocess_user_input(house_data, feature_order, X_train_means, X_train_stds, cat_maps, advertisement_categories,
+                          agent_id_categories, color_categories):
     # Process 'house_age'
     if 'year' in house_data and house_data['year'] is not None:
         try:
@@ -307,17 +335,60 @@ def preprocess_user_input(house_data, feature_order, X_train_means, X_train_stds
     else:
         house_data['rooms'] = 0
 
+    # One-hot encode 'advertisement' field
+    advertisement_onehot = [0] * len(advertisement_categories)
+    advertisement_value = house_data.get('advertisement', 'unknown')
+    if advertisement_value not in advertisement_categories:
+        advertisement_value = 'unknown'
+    if advertisement_value in advertisement_categories:
+        idx = advertisement_categories.index(advertisement_value)
+        advertisement_onehot[idx] = 1
+    house_data['advertisement_onehot'] = advertisement_onehot
+
+    # One-hot encode 'agent_id' field
+    agent_onehot = [0] * len(agent_id_categories)
+    agent_value = house_data.get('agent_id', 'unknown')
+    if agent_value not in agent_id_categories:
+        agent_value = 'unknown'
+    if agent_value in agent_id_categories:
+        idx = agent_id_categories.index(agent_value)
+        agent_onehot[idx] = 1
+    house_data['agent_id_onehot'] = agent_onehot
+
     # One-hot encode 'color' field
     color_onehot = [0] * len(color_categories)
     color_value = house_data.get('color', 'unknown')
     if color_value not in color_categories:
         color_value = 'unknown'
-    idx = color_categories.index(color_value)
-    color_onehot[idx] = 1
+    if color_value in color_categories:
+        idx = color_categories.index(color_value)
+        color_onehot[idx] = 1
     house_data['color_onehot'] = color_onehot
+
+    # Map 'district_id' to 'crime_rating' and 'public_transport_rating'
+    district_id = house_data.get('district_id', 'unknown')
+    if district_id in districts_dict:
+        house_data['crime_rating'] = districts_dict[district_id].get('crime_rating', 0)
+        house_data['public_transport_rating'] = districts_dict[district_id].get('public_transport_rating', 0)
+    else:
+        house_data['crime_rating'] = 0
+        house_data['public_transport_rating'] = 0
+
+    # Map 'school_id' to 'school_rating', 'capacity', and 'built_year'
+    school_id = house_data.get('school_id', 'unknown')
+    if school_id in schools_dict:
+        house_data['school_rating'] = schools_dict[school_id].get('rating', 0)
+        house_data['capacity'] = schools_dict[school_id].get('capacity', 0)
+        house_data['built_year'] = schools_dict[school_id].get('built_year', 0)
+    else:
+        house_data['school_rating'] = 0
+        house_data['capacity'] = 0
+        house_data['built_year'] = 0
 
     # Process other categorical fields
     for f in categorical_fields:
+        if f in ['advertisement', 'agent_id']:
+            continue  # Already handled
         val = house_data.get(f, "unknown")
         if not val or not isinstance(val, str):
             val = "unknown"
@@ -330,6 +401,8 @@ def preprocess_user_input(house_data, feature_order, X_train_means, X_train_stds
 
     # Process numeric fields
     for f in numeric_fields:
+        if f in ['advertisement', 'agent_id', 'color', 'crime_rating', 'public_transport_rating', 'school_rating', 'capacity', 'built_year']:
+            continue  # Already handled or added
         val = house_data.get(f, None)
         if val is None:
             house_data[f] = 0
@@ -342,10 +415,20 @@ def preprocess_user_input(house_data, feature_order, X_train_means, X_train_stds
     # Build processed_data according to feature_order
     processed_data = []
     for f in feature_order:
-        if f.startswith('color_'):
-            color_value = f[len('color_'):]
-            idx = color_categories.index(color_value)
+        if f.startswith('advertisement_'):
+            adv_val = f[len('advertisement_'):]
+            idx = advertisement_categories.index(adv_val)
+            processed_data.append(house_data['advertisement_onehot'][idx])
+        elif f.startswith('agent_id_'):
+            agent_val = f[len('agent_id_'):]
+            idx = agent_id_categories.index(agent_val)
+            processed_data.append(house_data['agent_id_onehot'][idx])
+        elif f.startswith('color_'):
+            color_val = f[len('color_'):]
+            idx = color_categories.index(color_val)
             processed_data.append(house_data['color_onehot'][idx])
+        elif f in ['crime_rating', 'public_transport_rating', 'school_rating', 'capacity', 'built_year']:
+            processed_data.append(float(house_data.get(f, 0)))
         else:
             processed_data.append(float(house_data.get(f, 0)))
 
@@ -356,12 +439,15 @@ def preprocess_user_input(house_data, feature_order, X_train_means, X_train_stds
 @app.route('/')
 def index():
     # Prepare dropdown lists
-    agent_ids = sorted({a['agent_id'] for a in data_agents if 'agent_id' in a})
+    agents = sorted(data_agents, key=lambda x: x.get('agent_id', 'unknown'))
+    agent_options = [{'id': a['agent_id'], 'name': a.get('name', 'unknown')} for a in agents]
+
     district_ids_list = sorted({d['id'] for d in data_districts if 'id' in d})
     school_ids_list = sorted({s['id'] for s in data_schools if 'id' in s})
 
     # If no known category, we can rely on 'unknown'
     colors_list = sorted(unique_values["colors"])
+    advertisement_list = unique_values["advertisement_types"]
 
     # Define months
     months_list = ["unknown", "January", "February", "March", "April", "May", "June", "July", "August", "September",
@@ -370,19 +456,21 @@ def index():
     return render_template('index.html',
                            unique_values=unique_values,
                            maximums=maximums,
-                           agent_ids=agent_ids,
+                           agent_options=agent_options,
                            district_ids_list=district_ids_list,
                            school_ids_list=school_ids_list,
                            colors_list=colors_list,
+                           advertisement_list=advertisement_list,
                            months_list=months_list
                            )
 
 @app.route('/predict', methods=['POST'])
 def predict_route():
     user_input = request.get_json()
-    w, b, X_train_means, X_train_stds, y_train_mean, y_train_std, feature_order, cat_maps, color_categories = load_model()
+    w, b, X_train_means, X_train_stds, y_train_mean, y_train_std, feature_order, cat_maps, advertisement_categories, agent_id_categories, color_categories = load_model()
 
-    features_scaled = preprocess_user_input(user_input, feature_order, X_train_means, X_train_stds, cat_maps, color_categories)
+    features_scaled = preprocess_user_input(user_input, feature_order, X_train_means, X_train_stds, cat_maps,
+                                            advertisement_categories, agent_id_categories, color_categories)
     predicted_price_scaled = predict(features_scaled.reshape(1, -1), w, b)
     predicted_price = (predicted_price_scaled * y_train_std) + y_train_mean
     rounded_price = round(predicted_price.item(), 2)
@@ -406,11 +494,13 @@ def list_routes():
 
 if __name__ == '__main__':
     if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+        # Load data
         agents = load_jsonl('data/agents.jsonl')
         districts = load_jsonl('data/districts.jsonl')
         schools = load_jsonl('data/schools.jsonl')
         houses = load_jsonl('data/houses.jsonl')
 
+        # Fill missing fields with 'unknown'
         for h in houses:
             if 'rooms' not in h:
                 h['rooms'] = "0 rooms"
@@ -433,52 +523,79 @@ if __name__ == '__main__':
             if 'school_id' not in h:
                 h['school_id'] = "unknown"
 
-        agents_dict = {agent['agent_id']: agent for agent in agents}
-        districts_dict = {district['id']: district for district in districts}
-        schools_dict = {school['id']: school for school in schools}
-
+        # Populate additional features from districts and schools
         for house in houses:
-            agent_info = agents_dict.get(house.get('agent_id'), {})
-            house['agent_name'] = agent_info.get('name', 'Unknown')
-            district_info = districts_dict.get(house.get('district_id'), {})
-            house['crime_rating'] = district_info.get('crime_rating', None)
-            house['public_transport_rating'] = district_info.get('public_transport_rating', None)
-            school_info = schools_dict.get(house.get('school_id'), {})
-            house['school_rating'] = school_info.get('rating', None)
-            house['school_capacity'] = school_info.get('capacity', None)
-            house['school_built_year'] = school_info.get('built_year', None)
+            # Add district features
+            district_id = house.get('district_id', 'unknown')
+            if district_id in districts_dict:
+                house['crime_rating'] = districts_dict[district_id].get('crime_rating', 0)
+                house['public_transport_rating'] = districts_dict[district_id].get('public_transport_rating', 0)
+            else:
+                house['crime_rating'] = 0
+                house['public_transport_rating'] = 0
 
+            # Add school features
+            school_id = house.get('school_id', 'unknown')
+            if school_id in schools_dict:
+                house['school_rating'] = schools_dict[school_id].get('rating', 0)
+                house['capacity'] = schools_dict[school_id].get('capacity', 0)
+                house['built_year'] = schools_dict[school_id].get('built_year', 0)
+            else:
+                house['school_rating'] = 0
+                house['capacity'] = 0
+                house['built_year'] = 0
+
+        # Encode 'rooms' and add 'house_age'
         for h in houses:
             encode_rooms(h)
 
         add_house_age(houses, current_year=2023)
         impute_missing_values(houses)
 
+        # One-hot encode the "advertisement" field
+        advertisement_categories = one_hot_encode_field(houses, "advertisement")
+        print("One-hot encoded categories for 'advertisement':", advertisement_categories)
+
+        # One-hot encode the "agent_id" field
+        agent_id_categories = one_hot_encode_field(houses, "agent_id")
+        print("One-hot encoded categories for 'agent_id':", agent_id_categories)
+
         # One-hot encode the "color" field
         color_categories = one_hot_encode_field(houses, "color")
         print("One-hot encoded categories for 'color':", color_categories)
 
+        # Encode categorical fields
         cat_maps = encode_categorical_fields(houses)
 
-        # Create feature order including one-hot encoded 'color' fields
+        # Create feature order including one-hot encoded 'advertisement', 'agent_id', and 'color' fields
+        one_hot_advertisement_fields = [f"advertisement_{val}" for val in advertisement_categories]
+        one_hot_agent_fields = [f"agent_id_{val}" for val in agent_id_categories]
         one_hot_color_fields = [f"color_{val}" for val in color_categories]
-        feature_order = one_hot_color_fields + [f for f in all_fields if f != 'color']
+        feature_order = one_hot_advertisement_fields + one_hot_agent_fields + one_hot_color_fields + [
+            f for f in all_fields if f not in ['advertisement', 'agent_id', 'color']
+        ]
 
-        X, y = prepare_dataset(houses, cat_maps, feature_order, color_categories)
+        # Prepare dataset
+        X, y = prepare_dataset(houses, cat_maps, feature_order, advertisement_categories, agent_id_categories,
+                               color_categories)
 
+        # Check for NaN or infinite values
         if np.isnan(X).any() or np.isinf(X).any():
             print("NaN or infinite values detected in feature matrix X.")
         if np.isnan(y).any() or np.isinf(y).any():
             print("NaN or infinite values detected in target vector y.")
 
+        # Split dataset
         X_train, X_test, y_train, y_test = train_test_split_custom(X, y)
 
+        # Feature scaling
         X_train_means = np.mean(X_train, axis=0)
         X_train_stds = np.std(X_train, axis=0)
-        X_train_stds[X_train_stds == 0] = 1
+        X_train_stds[X_train_stds == 0] = 1  # To avoid division by zero
         X_train_scaled = (X_train - X_train_means) / X_train_stds
         X_test_scaled = (X_test - X_train_means) / X_train_stds
 
+        # Target scaling
         y_train_mean = np.mean(y_train)
         y_train_std = np.std(y_train)
         if y_train_std == 0:
@@ -486,14 +603,18 @@ if __name__ == '__main__':
         y_train_scaled = (y_train - y_train_mean) / y_train_std
         y_test_scaled = (y_test - y_train_mean) / y_train_std
 
+        # Train model
         w, b, best_loss = train_linear_regression(X_train_scaled, y_train_scaled, learning_rate=0.001, epochs=2000,
                                                   batch_size=32)
         print(f'Best Loss: {best_loss}')
         print('Learned Weights:', w)
         print('Bias:', b)
 
+        # Evaluate model
         evaluate_model(X_test_scaled, y_test_scaled, w, b)
 
-        save_model(w, b, X_train_means, X_train_stds, y_train_mean, y_train_std, feature_order, cat_maps, color_categories)
+        # Save model
+        save_model(w, b, X_train_means, X_train_stds, y_train_mean, y_train_std, feature_order, cat_maps,
+                   advertisement_categories, agent_id_categories, color_categories)
 
     app.run(debug=True)

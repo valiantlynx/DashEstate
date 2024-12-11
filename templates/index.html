@@ -18,19 +18,18 @@
             <label for="advertisement">Advertisement</label>
             <select id="advertisement" class="toggle-input" onchange="fetchPrediction()">
                 <option value="">Select Advertisement Type</option>
-                <option value="no">No</option>
-                <option value="premium">Premium</option>
-                <option value="regular">Regular</option>
-                <option value="unknown">Unknown</option>
+                {% for adv in advertisement_list %}
+                <option value="{{ adv }}">{{ adv.capitalize() }}</option>
+                {% endfor %}
             </select>
         </div>
         <!-- agent_id -->
         <div class="input-item">
-            <label for="agent_id">Agent ID</label>
+            <label for="agent_id">Agent</label>
             <select id="agent_id" class="toggle-input" onchange="fetchPrediction()">
-                <option value="">Select Agent ID</option>
-                {% for a_id in agent_ids %}
-                <option value="{{ a_id }}">{{ a_id }}</option>
+                <option value="">Select Agent</option>
+                {% for agent in agent_options %}
+                <option value="{{ agent.id }}">{{ agent.name }}</option>
                 {% endfor %}
                 <option value="unknown">unknown</option>
             </select>
@@ -132,7 +131,7 @@
         </div>
         <!-- external_storage_m2 -->
         <div class="input-item">
-            <label for="external_storage_m2">External Storage (m2)</label>
+            <label for="external_storage_m2">External Storage (m²)</label>
             <input type="number" id="external_storage_m2" class="toggle-input" placeholder="Enter Ext. Storage" min="0" oninput="fetchPrediction()">
         </div>
         <!-- kitchens -->
@@ -142,8 +141,8 @@
         </div>
         <!-- lot_w -->
         <div class="input-item">
-            <label for="lot_w">Lot W</label>
-            <input type="number" id="lot_w" class="toggle-input" placeholder="Enter Lot W" min="0" oninput="fetchPrediction()">
+            <label for="lot_w">Lot Width</label>
+            <input type="number" id="lot_w" class="toggle-input" placeholder="Enter Lot Width" min="0" oninput="fetchPrediction()">
         </div>
         <!-- remodeled -->
         <div class="input-item">
