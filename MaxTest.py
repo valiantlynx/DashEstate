@@ -50,13 +50,16 @@ maximums = {
 
 
 all_fields = [
-    "advertisement", "agent_id", "bathrooms", "color", "condition_rating",
+    "advertisement", "agent_id", "bathrooms", "condition_rating",
     "days_on_marked", "district_id", "external_storage_m2", "fireplace", "kitchens",
     "lot_w", "parking", "remodeled", "rooms", "school_id", "size", "sold",
     "sold_in_month", "storage_rating", "sun_factor", "year", "house_age"
+    # Note: 'color' is removed from 'all_fields' as we are using one-hot encoding for it
 ]
 
-categorical_fields = ["advertisement", "agent_id", "color", "district_id", "fireplace", "parking", "school_id", "sold", "sold_in_month"]
+categorical_fields = ["advertisement", "agent_id", "district_id", "fireplace", "parking", "school_id", "sold", "sold_in_month"]
+# 'color' is handled separately for one-hot encoding
+
 numeric_fields = [f for f in all_fields if f not in categorical_fields]
 
 def impute_missing_values(houses):
@@ -65,7 +68,7 @@ def impute_missing_values(houses):
         if values:
             mean_val = np.mean(values)
             for h in houses:
-                if feature not in h or not isinstance(h[feature], (int,float)):
+                if feature not in h or not isinstance(h[feature], (int, float)):
                     h[feature] = mean_val
         else:
             for h in houses:
@@ -73,7 +76,7 @@ def impute_missing_values(houses):
     for feature in categorical_fields:
         for h in houses:
             val = h.get(feature, None)
-            if val is None or not isinstance(val, str) or val.strip()=="":
+            if val is None or not isinstance(val, str) or val.strip() == "":
                 h[feature] = "unknown"
 
 def encode_rooms(h):
@@ -109,13 +112,36 @@ def apply_categorical_encoding(h, cat_maps):
         else:
             h[f] = cat_maps[f][val]
 
-def prepare_dataset(houses, cat_maps):
+def one_hot_encode_field(houses, field):
+    unique_values = sorted(set(h.get(field, "unknown") for h in houses))
+    value_to_index = {val: idx for idx, val in enumerate(unique_values)}
+
+    for h in houses:
+        one_hot_vector = [0] * len(unique_values)
+        value = h.get(field, "unknown")
+        if value in value_to_index:
+            one_hot_vector[value_to_index[value]] = 1
+        else:
+            # If value not found, default to 'unknown' or zeros
+            if "unknown" in value_to_index:
+                one_hot_vector[value_to_index["unknown"]] = 1
+        h[f"{field}_onehot"] = one_hot_vector
+        print("one_hot_func= ",unique_values,one_hot_vector)
+    return unique_values
+
+def prepare_dataset(houses, cat_maps, feature_order, color_categories):
     X = []
     y = []
     for h in houses:
         apply_categorical_encoding(h, cat_maps)
         row = []
-        for f in all_fields:
+        # Include one-hot encoded 'color' field
+        for color_value in color_categories:
+            idx = color_categories.index(color_value)
+            row.append(h['color_onehot'][idx])
+
+        # Include other features based on 'feature_order'
+        for f in feature_order[len(color_categories):]:  # Skip the one-hot color fields
             row.append(float(h[f]))
         X.append(row)
         y.append(h['price'])
@@ -150,8 +176,8 @@ def compute_loss(y_true, y_pred):
 def compute_gradients_batch(X, y_true, y_pred):
     m = len(y_true)
     residuals = y_pred - y_true
-    dw = (1/m) * np.dot(X.T, residuals)
-    db = (1/m) * np.sum(residuals)
+    dw = (1 / m) * np.dot(X.T, residuals)
+    db = (1 / m) * np.sum(residuals)
     return dw, db
 
 def update_parameters(w, b, dw, db, learning_rate):
@@ -237,7 +263,7 @@ def evaluate_model(X_test, y_test_scaled, w, b):
     print(f'Test RMSE: {rmse}')
     print(f'R-squared: {r_squared}')
 
-def save_model(w, b, X_train_means, X_train_stds, y_train_mean, y_train_std, feature_order, cat_maps, filename='linear_regression_model.pkl'):
+def save_model(w, b, X_train_means, X_train_stds, y_train_mean, y_train_std, feature_order, cat_maps, color_categories, filename='linear_regression_model.pkl'):
     model = {
         'weights': w,
         'bias': b,
@@ -246,7 +272,8 @@ def save_model(w, b, X_train_means, X_train_stds, y_train_mean, y_train_std, fea
         'y_train_mean': y_train_mean,
         'y_train_std': y_train_std,
         'feature_order': feature_order,
-        'cat_maps': cat_maps
+        'cat_maps': cat_maps,
+        'color_categories': color_categories
     }
     with open(filename, 'wb') as f:
         pickle.dump(model, f)
@@ -257,9 +284,10 @@ def load_model(filename='linear_regression_model.pkl'):
         model = pickle.load(f)
     print(f"Model loaded from {filename}")
     return (model['weights'], model['bias'], model['X_train_means'], model['X_train_stds'],
-            model['y_train_mean'], model['y_train_std'], model['feature_order'], model['cat_maps'])
+            model['y_train_mean'], model['y_train_std'], model['feature_order'], model['cat_maps'], model['color_categories'])
 
-def preprocess_user_input(house_data, feature_order, X_train_means, X_train_stds, cat_maps):
+def preprocess_user_input(house_data, feature_order, X_train_means, X_train_stds, cat_maps, color_categories):
+    # Process 'house_age'
     if 'year' in house_data and house_data['year'] is not None:
         try:
             y = float(house_data['year'])
@@ -269,6 +297,7 @@ def preprocess_user_input(house_data, feature_order, X_train_means, X_train_stds
     else:
         house_data['house_age'] = 0
 
+    # Process 'rooms'
     if 'rooms' in house_data:
         r_str = str(house_data['rooms'])
         try:
@@ -278,16 +307,16 @@ def preprocess_user_input(house_data, feature_order, X_train_means, X_train_stds
     else:
         house_data['rooms'] = 0
 
-    for f in numeric_fields:
-        val = house_data.get(f, None)
-        if val is None:
-            house_data[f] = 0
-        else:
-            try:
-                house_data[f] = float(val)
-            except:
-                house_data[f] = 0
+    # One-hot encode 'color' field
+    color_onehot = [0] * len(color_categories)
+    color_value = house_data.get('color', 'unknown')
+    if color_value not in color_categories:
+        color_value = 'unknown'
+    idx = color_categories.index(color_value)
+    color_onehot[idx] = 1
+    house_data['color_onehot'] = color_onehot
 
+    # Process other categorical fields
     for f in categorical_fields:
         val = house_data.get(f, "unknown")
         if not val or not isinstance(val, str):
@@ -299,7 +328,27 @@ def preprocess_user_input(house_data, feature_order, X_train_means, X_train_stds
                 val = list(cat_maps[f].keys())[0]
         house_data[f] = cat_maps[f][val]
 
-    processed_data = [float(house_data.get(f,0)) for f in feature_order]
+    # Process numeric fields
+    for f in numeric_fields:
+        val = house_data.get(f, None)
+        if val is None:
+            house_data[f] = 0
+        else:
+            try:
+                house_data[f] = float(val)
+            except:
+                house_data[f] = 0
+
+    # Build processed_data according to feature_order
+    processed_data = []
+    for f in feature_order:
+        if f.startswith('color_'):
+            color_value = f[len('color_'):]
+            idx = color_categories.index(color_value)
+            processed_data.append(house_data['color_onehot'][idx])
+        else:
+            processed_data.append(float(house_data.get(f, 0)))
+
     processed_data = np.array(processed_data)
     processed_data_scaled = (processed_data - X_train_means) / X_train_stds
     return processed_data_scaled
@@ -315,7 +364,8 @@ def index():
     colors_list = sorted(unique_values["colors"])
 
     # Define months
-    months_list = ["unknown","January","February","March","April","May","June","July","August","September","October","November","December"]
+    months_list = ["unknown", "January", "February", "March", "April", "May", "June", "July", "August", "September",
+                   "October", "November", "December"]
 
     return render_template('index.html',
                            unique_values=unique_values,
@@ -330,9 +380,9 @@ def index():
 @app.route('/predict', methods=['POST'])
 def predict_route():
     user_input = request.get_json()
-    w, b, X_train_means, X_train_stds, y_train_mean, y_train_std, feature_order, cat_maps = load_model()
+    w, b, X_train_means, X_train_stds, y_train_mean, y_train_std, feature_order, cat_maps, color_categories = load_model()
 
-    features_scaled = preprocess_user_input(user_input, feature_order, X_train_means, X_train_stds, cat_maps)
+    features_scaled = preprocess_user_input(user_input, feature_order, X_train_means, X_train_stds, cat_maps, color_categories)
     predicted_price_scaled = predict(features_scaled.reshape(1, -1), w, b)
     predicted_price = (predicted_price_scaled * y_train_std) + y_train_mean
     rounded_price = round(predicted_price.item(), 2)
@@ -403,8 +453,18 @@ if __name__ == '__main__':
 
         add_house_age(houses, current_year=2023)
         impute_missing_values(houses)
+
+        # One-hot encode the "color" field
+        color_categories = one_hot_encode_field(houses, "color")
+        print("One-hot encoded categories for 'color':", color_categories)
+
         cat_maps = encode_categorical_fields(houses)
-        X, y = prepare_dataset(houses, cat_maps)
+
+        # Create feature order including one-hot encoded 'color' fields
+        one_hot_color_fields = [f"color_{val}" for val in color_categories]
+        feature_order = one_hot_color_fields + [f for f in all_fields if f != 'color']
+
+        X, y = prepare_dataset(houses, cat_maps, feature_order, color_categories)
 
         if np.isnan(X).any() or np.isinf(X).any():
             print("NaN or infinite values detected in feature matrix X.")
@@ -434,6 +494,6 @@ if __name__ == '__main__':
 
         evaluate_model(X_test_scaled, y_test_scaled, w, b)
 
-        save_model(w, b, X_train_means, X_train_stds, y_train_mean, y_train_std, all_fields, cat_maps)
+        save_model(w, b, X_train_means, X_train_stds, y_train_mean, y_train_std, feature_order, cat_maps, color_categories)
 
     app.run(debug=True)
