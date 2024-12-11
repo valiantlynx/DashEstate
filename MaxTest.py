@@ -144,6 +144,21 @@ def impute_missing_values(houses):
                 h[feature] = "unknown"
 
 
+def encode_districts(houses, districts):
+    district_scores = {}
+    for district in districts:
+        score = (
+            district.get("crime_rating", 0)  # Lower crime is better
+            +
+            # Higher transport rating is better
+            district.get("public_transport_rating", 0)
+        )
+        district_scores[district["id"]] = score
+
+    for house in houses:
+        house["district_score"] = district_scores.get(house["district_id"], 0)
+
+
 def encode_schools(houses, schools):
     school_scores = {}
     for school in schools:
@@ -163,35 +178,10 @@ def encode_schools(houses, schools):
         school_scores[school_id] = (school_scores[school_id] - min_score) / (
             max_score - min_score
         )
+        print(f"School ID: {school_id}, Score: {school_scores[school_id]}")
 
     for house in houses:
         house["school_score"] = school_scores.get(house["school_id"], 0)
-        print("shool score:", house["school_score"])
-
-
-def encode_districts(houses, districts):
-    district_scores = {}
-    for district in districts:
-        score = (
-            district.get("crime_rating", 0) * -1  # Lower crime is better
-            +
-            # Higher transport rating is better
-            district.get("public_transport_rating", 0)
-        )
-        district_scores[district["id"]] = score
-
-    min_score = min(district_scores.values())
-    max_score = max(district_scores.values())
-
-    # Normalize scores to [0, 1]
-    for district_id in district_scores:
-        district_scores[district_id] = (district_scores[district_id] - min_score) / (
-            max_score - min_score
-        )
-
-    for i, house in enumerate(houses):
-        house["district_score"] = district_scores.get(house["district_id"], 0)
-        print("district score:", i, house["district_score"])
 
 
 def encode_rooms(h):
@@ -581,6 +571,7 @@ def predict_route():
         cat_maps,
         color_categories,
     )
+    print(features_scaled)
     predicted_price_scaled = predict(features_scaled.reshape(1, -1), w, b)
     predicted_price = (predicted_price_scaled * y_train_std) + y_train_mean
     rounded_price = round(predicted_price.item(), 2)
@@ -643,15 +634,8 @@ if __name__ == "__main__":
             agent_info = agents_dict.get(house.get("agent_id"), {})
             house["agent_name"] = agent_info.get("name", "Unknown")
             district_info = districts_dict.get(house.get("district_id"), {})
-            house["crime_rating"] = district_info.get("crime_rating", None)
-            house["public_transport_rating"] = district_info.get(
-                "public_transport_rating", None
-            )
             school_info = schools_dict.get(house.get("school_id"), {})
-            house["school_rating"] = school_info.get("rating", None)
-            house["school_capacity"] = school_info.get("capacity", None)
-            house["school_built_year"] = school_info.get("built_year", None)
-
+            print("district score:", house["district_score"])
         for h in houses:
             encode_rooms(h)
 
