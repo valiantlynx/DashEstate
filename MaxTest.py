@@ -166,6 +166,7 @@ def encode_schools(houses, schools):
 
     for house in houses:
         house["school_score"] = school_scores.get(house["school_id"], 0)
+        print("shool score:", house["school_score"])
 
 
 def encode_districts(houses, districts):
@@ -188,8 +189,9 @@ def encode_districts(houses, districts):
             max_score - min_score
         )
 
-    for house in houses:
+    for i, house in enumerate(houses):
         house["district_score"] = district_scores.get(house["district_id"], 0)
+        print("district score:", i, house["district_score"])
 
 
 def encode_rooms(h):
@@ -243,7 +245,7 @@ def one_hot_encode_field(houses, field):
             if "unknown" in value_to_index:
                 one_hot_vector[value_to_index["unknown"]] = 1
         h[f"{field}_onehot"] = one_hot_vector
-        print("one_hot_func= ", unique_values, one_hot_vector)
+        # print("one_hot_func= ", unique_values, one_hot_vector)
     return unique_values
 
 
@@ -360,7 +362,8 @@ def train_linear_regression(
             loss = compute_loss(y_batch, y_pred_batch)
             if np.isnan(loss) or np.isinf(loss):
                 print(
-                    f"Training stopped due to NaN/Inf loss at epoch {epoch}, batch {start_idx}."
+                    f"Training stopped due to NaN/Inf loss at epoch {
+                        epoch}, batch {start_idx}."
                 )
                 save_state_to_file(best_w, best_b, best_loss, state_file)
                 return best_w, best_b, best_loss
@@ -369,7 +372,7 @@ def train_linear_regression(
             if np.isnan(dw).any() or np.isnan(db) or np.isinf(dw).any() or np.isinf(db):
                 print(
                     f"Invalid gradients at epoch {
-                      epoch}, batch {start_idx}."
+                        epoch}, batch {start_idx}."
                 )
                 save_state_to_file(best_w, best_b, best_loss, state_file)
                 return best_w, best_b, best_loss
@@ -608,7 +611,8 @@ if __name__ == "__main__":
         districts = load_jsonl("data/districts.jsonl")
         schools = load_jsonl("data/schools.jsonl")
         houses = load_jsonl("data/houses.jsonl")
-
+        encode_districts(houses, districts)
+        encode_schools(houses, schools)
         for h in houses:
             if "rooms" not in h:
                 h["rooms"] = "0 rooms"
