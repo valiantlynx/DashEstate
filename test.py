@@ -11,6 +11,7 @@ def load_jsonl(file_path):
     data = []
     with open(file_path, "r") as f:
         for line in f:
+            print(line)
             data.append(json.loads(line))
     return data
 
@@ -33,12 +34,12 @@ def test_predictions(api_url, houses_data):
             else:
                 print(
                     f"Error in prediction for house: {
-                      house}, Response: {result}"
+                        house}, Response: {result}"
                 )
         else:
             print(
                 f"Failed to get prediction. Status Code: {
-                  response.status_code}, Response: {response.text}"
+                    response.status_code}, Response: {response.text}"
             )
 
     return np.array(y_true), np.array(y_pred)
