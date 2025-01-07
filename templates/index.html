@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KKD - Real Estate Dashboard</title>
+    <link rel="stylesheet" href="static/styles.css">
+</head>
+<body>
+    <h3 style="text-align: center; font-size: 40px">KKD - Real Estate Dashboard</h3>
+    <hr>
+    <button id="clear-button">Clear All Filters</button>
+    <div class="input-grid">
+
+        <!-- Categorical Fields -->
+        <!-- advertisement -->
+        <div class="input-item">
+            <label for="advertisement">Advertisement</label>
+            <select id="advertisement" class="toggle-input" onchange="fetchPrediction()">
+                <option value="">Select Advertisement Type</option>
+                {% for adv in advertisement_list %}
+                <option value="{{ adv }}">{{ adv.capitalize() }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <!-- agent_id -->
+        <div class="input-item">
+            <label for="agent_id">Agent</label>
+            <select id="agent_id" class="toggle-input" onchange="fetchPrediction()">
+                <option value="">Select Agent</option>
+                {% for agent in agent_options %}
+                <option value="{{ agent.id }}">{{ agent.name }}</option>
+                {% endfor %}
+                <option value="unknown">unknown</option>
+            </select>
+        </div>
+        <!-- color -->
+        <div class="input-item">
+            <label for="color">Color</label>
+            <select id="color" class="toggle-input" onchange="fetchPrediction()">
+                <option value="">Select Color</option>
+                {% for c in colors_list %}
+                <option value="{{ c }}">{{ c }}</option>
+                {% endfor %}
+                <option value="unknown">unknown</option>
+            </select>
+        </div>
+        <!-- district_id -->
+        <div class="input-item">
+            <label for="district_id">District ID</label>
+            <select id="district_id" class="toggle-input" onchange="fetchPrediction()">
+                <option value="">Select District ID</option>
+                {% for d_id in district_ids_list %}
+                <option value="{{ d_id }}">{{ d_id }}</option>
+                {% endfor %}
+                <option value="unknown">unknown</option>
+            </select>
+        </div>
+        <!-- fireplace -->
+        <div class="input-item">
+            <label for="fireplace">Fireplace</label>
+            <select id="fireplace" class="toggle-input" onchange="fetchPrediction()">
+                <option value="">Select Fireplace</option>
+                <option value="no">No</option>
+                <option value="yes">Yes</option>
+                <option value="unknown">unknown</option>
+            </select>
+        </div>
+        <!-- parking -->
+        <div class="input-item">
+            <label for="parking">Parking</label>
+            <select id="parking" class="toggle-input" onchange="fetchPrediction()">
+                <option value="">Select Parking</option>
+                <option value="no">No</option>
+                <option value="yes">Yes</option>
+                <option value="unknown">unknown</option>
+            </select>
+        </div>
+        <!-- school_id -->
+        <div class="input-item">
+            <label for="school_id">School ID</label>
+            <select id="school_id" class="toggle-input" onchange="fetchPrediction()">
+                <option value="">Select School ID</option>
+                {% for s_id in school_ids_list %}
+                <option value="{{ s_id }}">{{ s_id }}</option>
+                {% endfor %}
+                <option value="unknown">unknown</option>
+            </select>
+        </div>
+        <!-- sold -->
+        <div class="input-item">
+            <label for="sold">Sold</label>
+            <select id="sold" class="toggle-input" onchange="fetchPrediction()">
+                <option value="">Select Sold</option>
+                <option value="no">No</option>
+                <option value="yes">Yes</option>
+                <option value="unknown">unknown</option>
+            </select>
+        </div>
+        <!-- sold_in_month -->
+        <div class="input-item">
+            <label for="sold_in_month">Sold in Month</label>
+            <select id="sold_in_month" class="toggle-input" onchange="fetchPrediction()">
+                <option value="">Select Month</option>
+                {% for m in months_list %}
+                <option value="{{ m }}">{{ m }}</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <!-- Numeric Fields -->
+        <!-- year -->
+        <div class="input-item">
+            <label for="year">Year</label>
+            <input type="number" id="year" class="toggle-input" placeholder="Enter Year" min="1900" max="2030" oninput="fetchPrediction()">
+        </div>
+        <!-- bathrooms -->
+        <div class="input-item">
+            <label for="bathrooms">Bathrooms</label>
+            <input type="number" id="bathrooms" class="toggle-input" placeholder="Enter Bathrooms" min="0" oninput="fetchPrediction()">
+        </div>
+        <!-- condition_rating -->
+        <div class="input-item">
+            <label for="condition_rating">Condition Rating</label>
+            <input type="number" id="condition_rating" class="toggle-input" placeholder="Enter Condition Rating" min="0" oninput="fetchPrediction()">
+        </div>
+        <!-- days_on_marked -->
+        <div class="input-item">
+            <label for="days_on_marked">Days on Market</label>
+            <input type="number" step="0.1" id="days_on_marked" class="toggle-input" placeholder="e.g. 30.7" oninput="fetchPrediction()">
+        </div>
+        <!-- external_storage_m2 -->
+        <div class="input-item">
+            <label for="external_storage_m2">External Storage (m²)</label>
+            <input type="number" id="external_storage_m2" class="toggle-input" placeholder="Enter Ext. Storage" min="0" oninput="fetchPrediction()">
+        </div>
+        <!-- kitchens -->
+        <div class="input-item">
+            <label for="kitchens">Kitchens</label>
+            <input type="number" id="kitchens" class="toggle-input" placeholder="Enter Kitchens" min="0" oninput="fetchPrediction()">
+        </div>
+        <!-- lot_w -->
+        <div class="input-item">
+            <label for="lot_w">Lot Width</label>
+            <input type="number" id="lot_w" class="toggle-input" placeholder="Enter Lot Width" min="0" oninput="fetchPrediction()">
+        </div>
+        <!-- remodeled -->
+        <div class="input-item">
+            <label for="remodeled">Remodeled (Year)</label>
+            <input type="number" id="remodeled" class="toggle-input" placeholder="Enter Remodeled Year" min="1900" max="2030" oninput="fetchPrediction()">
+        </div>
+        <!-- rooms -->
+        <div class="input-item">
+            <label for="rooms">Rooms</label>
+            <input type="text" id="rooms" class="toggle-input" placeholder="e.g. '3 rooms'" oninput="fetchPrediction()">
+        </div>
+        <!-- size -->
+        <div class="input-item">
+            <label for="size">Size</label>
+            <input type="number" id="size" class="toggle-input" placeholder="Enter Size" min="0" oninput="fetchPrediction()">
+        </div>
+        <!-- storage_rating -->
+        <div class="input-item">
+            <label for="storage_rating">Storage Rating</label>
+            <input type="number" id="storage_rating" class="toggle-input" placeholder="Enter Storage Rating" min="0" oninput="fetchPrediction()">
+        </div>
+        <!-- sun_factor -->
+        <div class="input-item">
+            <label for="sun_factor">Sun Factor</label>
+            <input type="number" step="0.001" id="sun_factor" class="toggle-input" placeholder="e.g. 0.595" oninput="fetchPrediction()">
+        </div>
+    </div>
+    <hr>
+    <div id="predicted-price"></div>
+
+<script>
+    function fetchPrediction() {
+        const inputs = {};
+        document.querySelectorAll('.input-item input, .input-item select').forEach(input => {
+            inputs[input.id] = input.value || null;
+        });
+
+        fetch('/predict', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(inputs)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.price) {
+                const formattedPrice = data.price.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+                document.getElementById('predicted-price').innerHTML = `<div style="text-align: center; font-size: 40px">Estimated Price: ${formattedPrice}</div>`;
+            } else if (data.error) {
+                document.getElementById('predicted-price').innerHTML = `<div style="text-align: center; font-size: 24px; color: red;">Error: ${data.error}</div>`;
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('predicted-price').innerHTML = `<div style="text-align: center; font-size: 24px; color: red;">An error occurred while fetching the prediction.</div>`;
+        });
+    }
+
+    document.getElementById('clear-button').addEventListener('click', () => {
+        document.querySelectorAll('.input-item input, .input-item select').forEach(input => {
+            input.value = '';
+        });
+        fetchPrediction();
+    });
+</script>
+</body>
+</html>
